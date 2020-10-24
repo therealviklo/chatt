@@ -1,0 +1,1 @@
+@vmake clang++ -std=c++20 -o chatt.exe NAMN
