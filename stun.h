@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <vector>
 #include "wsa.h"
 
 namespace MessageType
@@ -16,11 +17,23 @@ namespace MessageType
 	namespace Method
 	{
 		enum {
-			binding = 1,
-			xor_mapped_address = 0x0020,
-			software = 0x8022
+			binding = 1
 		};
 	}
+
+	namespace Mask
+	{
+		constexpr const uint16_t Class = 0b100010000;
+		constexpr const uint16_t Method = 0b0011111011101111;
+	}
+}
+
+namespace Attribute
+{
+	enum {
+		xor_mapped_address = 0x0020,
+		software = 0x8022
+	};
 }
 
 struct StunMessageHeader
@@ -28,7 +41,11 @@ struct StunMessageHeader
 	uint16_t messageType;
 	uint16_t length;
 	uint8_t cookie[4] = {0x21, 0x12, 0xa4, 0x42};
-	uint16_t transactionId[3];
+	uint32_t transactionId[3];
 };
+
+EXCEPT(StunException)
+
+void getTransactionId(uint32_t* transactionId);
 
 void stun(Socket& s);

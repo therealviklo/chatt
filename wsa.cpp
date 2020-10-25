@@ -57,6 +57,12 @@ void Socket::bind(unsigned short port)
 		throw WSAException("failed to bind socket");
 }
 
+void Socket::setTimeout(DWORD time)
+{
+	if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&time, sizeof(time)) == SOCKET_ERROR)
+		throw WSAException("failed to set socket timeout");
+}
+
 void Socket::send(const Name& name, const std::string& msg)
 {
 	sockaddr_in sa = nameToAddr(name);
@@ -75,41 +81,71 @@ std::string Socket::recv(int max, Name* name)
 {
 	std::string buf;
 	buf.resize(max);
-	int recieved;
+	int received;
 	if (name)
 	{
 		sockaddr_in sa{};
 		int size = sizeof(sa);
-		recieved = ::recvfrom(s, &buf[0], max, 0, (sockaddr*)&sa, &size);
-		if (recieved == SOCKET_ERROR) throw WSAException("failed to recieve data");
+		received = ::recvfrom(s, &buf[0], max, 0, (sockaddr*)&sa, &size);
+		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
 		*name = addrToName(sa);
 	}
 	else
 	{
-		recieved = ::recvfrom(s, &buf[0], max, 0, nullptr, nullptr);
-		if (recieved == SOCKET_ERROR) throw WSAException("failed to recieve data");
+		received = ::recvfrom(s, &buf[0], max, 0, nullptr, nullptr);
+		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
 	}
-	if (recieved == 0) return "";
-	buf.resize(recieved);
+	if (received == 0) return "";
+	buf.resize(received);
 	return std::move(buf);
 }
 
 void Socket::recv(void* buffer, int size, Name* name)
 {
-	int recieved;
+	int received;
 	if (name)
 	{
 		sockaddr_in sa{};
 		int size = sizeof(sa);
-		recieved = ::recvfrom(s, (char*)buffer, size, 0, (sockaddr*)&sa, &size);
-		if (recieved == SOCKET_ERROR) throw WSAException("failed to recieve data");
+		received = ::recvfrom(s, (char*)buffer, size, 0, (sockaddr*)&sa, &size);
+		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
 		*name = addrToName(sa);
 	}
 	else
 	{
-		recieved = ::recvfrom(s, (char*)buffer, size, 0, nullptr, nullptr);
-		if (recieved == SOCKET_ERROR) throw WSAException("failed to recieve data");
+		received = ::recvfrom(s, (char*)buffer, size, 0, nullptr, nullptr);
+		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
 	}
-	if (recieved == 0) throw ConnectionClosed("connection closed gracefully");
-	if (recieved != size) throw Exception("did not recieve correct amount of data");
+	if (received == 0) throw ConnectionClosed("connection closed gracefully");
+	if (received != size) throw Exception("did not receive correct amount of data");
+}
+
+void Socket::peek(void* buffer, int size, Name* name)
+{
+	int received;
+	if (name)
+	{
+		sockaddr_in sa{};
+		int size = sizeof(sa);
+		received = ::recvfrom(s, (char*)buffer, size, MSG_PEEK, (sockaddr*)&sa, &size);
+		if (received == SOCKET_ERROR)
+		{
+			int errCode = WSAGetLastError();
+			if (errCode != 10040)
+				throw WSAException("failed to receive data", errCode);
+		}
+		*name = addrToName(sa);
+	}
+	else
+	{
+		received = ::recvfrom(s, (char*)buffer, size, MSG_PEEK, nullptr, nullptr);
+		if (received == SOCKET_ERROR)
+		{
+			int errCode = WSAGetLastError();
+			if (errCode != 10040)
+				throw WSAException("failed to receive data", errCode);
+		}
+	}
+	if (received == 0) throw ConnectionClosed("connection closed gracefully");
+	if (received > 0 && received < size) throw Exception("did not receive correct amount of data");
 }

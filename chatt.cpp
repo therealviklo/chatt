@@ -3,6 +3,7 @@
 #include "win.h"
 #include "utils.h"
 #include "wsa.h"
+#include "stun.h"
 
 int main(int argc, char* argv[])
 {
@@ -21,7 +22,7 @@ int main(int argc, char* argv[])
 			Socket s;
 			s.send({argv[2], (unsigned short)std::stoul(argv[3])}, "testyy");
 		}
-		else if (strcmp(argv[1], "reciever") == 0)
+		else if (strcmp(argv[1], "receiver") == 0)
 		{
 			if (argc != 2) throw std::runtime_error("invalid number of command-line arguments");
 			Socket s;
@@ -29,8 +30,10 @@ int main(int argc, char* argv[])
 			auto name = s.getName();
 			printf("IP: %s\nPort: %hu\n", name.ip.c_str(), name.port);
 
+			stun(s);
+
 			Name sender;
-			printf("Recieved: %s\n", s.recv(256, &sender).c_str());
+			printf("Received: %s\n", s.recv(256, &sender).c_str());
 			printf("From: %s:%hu", sender.ip.c_str(), sender.port);
 		}
 		else

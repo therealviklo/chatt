@@ -60,6 +60,7 @@ public:
 	Name getName();
 
 	void bind(unsigned short port);
+	void setTimeout(DWORD time);
 
 	void send(const Name& name, const std::string& msg);
 	void send(const Name& name, const void* data, int size);
