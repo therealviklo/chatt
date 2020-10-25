@@ -1,1 +1,1 @@
-@vmake clang++ -std=c++20 -o chatt.exe NAMN
+@vmake clang++ -std=c++20 -o chatt.exe -lws2_32 -lntdll NAMN

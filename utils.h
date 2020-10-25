@@ -7,17 +7,17 @@
 		name(const char* msg) : std::runtime_error(msg) {} \
 	};
 
-template <typename T, auto Closer>
+template <typename T, auto Closer, T InvalidHandle = nullptr>
 class UHandle
 {
 private:
 	T handle;
 public:
-	UHandle() noexcept : handle(nullptr) {}
+	UHandle() noexcept : handle(InvalidHandle) {}
 	explicit UHandle(T handle) noexcept : handle(handle) {}
 	UHandle& operator=(T handle)
 	{
-		if (this->handle) Closer(this->handle);
+		if (this->handle != InvalidHandle) Closer(this->handle);
 
 		this->handle = handle;
 		return *this;
@@ -25,22 +25,22 @@ public:
 	UHandle(UHandle&& o) noexcept
 	{
 		handle = o.handle;
-		o.handle = nullptr;
+		o.handle = InvalidHandle;
 	}
 	UHandle& operator=(UHandle&& o)
 	{
 		if (&o != this)
 		{
-			if (handle) Closer(handle);
+			if (handle != InvalidHandle) Closer(handle);
 
 			handle = o.handle;
-			o.handle = nullptr;
+			o.handle = InvalidHandle;
 		}
 		return *this;
 	}
 	~UHandle()
 	{
-		if (handle) Closer(handle);
+		if (handle != InvalidHandle) Closer(handle);
 	}
 
 	UHandle(const UHandle&) = delete;
@@ -50,9 +50,11 @@ public:
 
 	T* operator&()
 	{
-		if (handle) Closer(handle);
-		handle = nullptr;
+		if (handle != InvalidHandle) Closer(handle);
+		handle = InvalidHandle;
 		return &handle;
 	}
 	T* operator->() { return &handle; }
+	
+	constexpr operator bool() const noexcept { return handle != InvalidHandle; }
 };
