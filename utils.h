@@ -58,3 +58,19 @@ public:
 	
 	constexpr operator bool() const noexcept { return handle != InvalidHandle; }
 };
+
+template <typename L>
+class Defer
+{
+private:
+	L l;
+public:
+	Defer(L&& l) : l(std::move(l)) {}
+	~Defer()
+	{
+		l();
+	}
+
+	Defer(const Defer&) = delete;
+	Defer& operator=(const Defer&) = delete;
+};

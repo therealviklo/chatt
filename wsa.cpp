@@ -2,21 +2,44 @@
 
 WSAHandler wsaHandler;
 
-Name addrToName(const sockaddr_in& addr)
+Name addrToName(const Addr& addr)
 {
 	char buf[47];
-	RtlIpv4AddressToStringA(&addr.sin_addr, buf);
-	return {buf, ntohs(addr.sin_port)};
+	if (addr.family == AF_INET)
+	{
+		RtlIpv4AddressToStringA(&addr.ipv4.sin_addr, buf);
+		return {buf, ntohs(addr.ipv4.sin_port)};
+	}
+	else if (addr.family == AF_INET6)
+	{
+		RtlIpv6AddressToStringA(&addr.ipv6.sin6_addr, buf);
+		return {buf, ntohs(addr.ipv6.sin6_port)};
+	}
+	else
+	{
+		throw AddressException("address is neither IPv4 nor IPv6");
+	}
 }
 
-sockaddr_in nameToAddr(const Name& name)
+Addr nameToAddr(const Name& name)
 {
-	sockaddr_in sa{};
-	sa.sin_family = AF_INET;
-	sa.sin_port = htons(name.port);
-	const char* end;
-	if (RtlIpv4StringToAddressA(name.ip.c_str(), FALSE, &end, &sa.sin_addr))
-		throw AddressException("failed to convert IP address");
+	Addr sa{};
+	if (name.ip.find_first_of("."))
+	{
+		sa.ipv4.sin_family = AF_INET;
+		sa.ipv4.sin_port = htons(name.port);
+		const char* end;
+		if (RtlIpv4StringToAddressA(name.ip.c_str(), FALSE, &end, &sa.ipv4.sin_addr))
+			throw AddressException("failed to convert IP address");
+	}
+	else
+	{
+		sa.ipv6.sin6_family = AF_INET6;
+		sa.ipv6.sin6_port = htons(name.port);
+		const char* end;
+		if (RtlIpv6StringToAddressA(name.ip.c_str(), &end, &sa.ipv6.sin6_addr))
+			throw AddressException("failed to convert IP address");	
+	}
 	return sa;
 }
 
@@ -32,29 +55,42 @@ void WSAHandler::initialise()
 	initialised = true;
 }
 
-Socket::Socket()
+Socket::Socket(bool ipv4)
+	: ipv4(ipv4)
 {
-	s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	s = socket(ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (!s) throw WSAException("failed to create socket");
 }
 
-Name Socket::getName()
+Addr Socket::getAddr()
 {
-	sockaddr_in sa;
+	Addr sa;
 	int len = sizeof(sa);
 	if (getsockname(s, (sockaddr*)&sa, &len) == SOCKET_ERROR)
 		throw WSAException("failed to get socket name");
-	return addrToName(sa);
+	return sa;
 }
 
 void Socket::bind(unsigned short port)
 {
-	sockaddr_in sa{};
-	sa.sin_family = AF_INET;
-	sa.sin_port = htons(port);
-	sa.sin_addr.s_addr = INADDR_ANY;
-	if (::bind(s, (const sockaddr*)&sa, sizeof(sa)) == SOCKET_ERROR)
-		throw WSAException("failed to bind socket");
+	if (ipv4)
+	{
+		sockaddr_in sa{};
+		sa.sin_family = AF_INET;
+		sa.sin_port = htons(port);
+		sa.sin_addr.s_addr = INADDR_ANY;
+		if (::bind(s, (const sockaddr*)&sa, sizeof(sa)) == SOCKET_ERROR)
+			throw WSAException("failed to bind socket");
+	}
+	else
+	{
+		sockaddr_in6 sa{};
+		sa.sin6_family = AF_INET6;
+		sa.sin6_port = htons(port);
+		sa.sin6_addr = in6addr_any;
+		if (::bind(s, (const sockaddr*)&sa, sizeof(sa)) == SOCKET_ERROR)
+			throw WSAException("failed to bind socket");
+	}
 }
 
 void Socket::setTimeout(DWORD time)
@@ -63,32 +99,42 @@ void Socket::setTimeout(DWORD time)
 		throw WSAException("failed to set socket timeout");
 }
 
-void Socket::send(const Name& name, const std::string& msg)
+void Socket::send(const Addr& addr, const std::string& msg)
 {
-	sockaddr_in sa = nameToAddr(name);
-	if (sendto(s, msg.data(), msg.size(), 0, (const sockaddr*)&sa, sizeof(sa)) == SOCKET_ERROR)
+	if (sendto(
+		s,
+		msg.data(),
+		msg.size(),
+		0,
+		(const sockaddr*)&addr,
+		addr.family == AF_INET ? sizeof(addr.ipv4) : sizeof(addr.ipv6)
+	) == SOCKET_ERROR)
 		throw WSAException("failed to send data");
 }
 
-void Socket::send(const Name& name, const void* data, int size)
+void Socket::send(const Addr& addr, const void* data, int size)
 {
-	sockaddr_in sa = nameToAddr(name);
-	if (sendto(s, (const char*)data, size, 0, (const sockaddr*)&sa, sizeof(sa)) == SOCKET_ERROR)
+	if (sendto(
+		s,
+		(const char*)data,
+		size,
+		0,
+		(const sockaddr*)&addr,
+		addr.family == AF_INET ? sizeof(addr.ipv4) : sizeof(addr.ipv6)
+	) == SOCKET_ERROR)
 		throw WSAException("failed to send data");
 }
 
-std::string Socket::recv(int max, Name* name)
+std::string Socket::recv(int max, Addr* addr)
 {
 	std::string buf;
 	buf.resize(max);
 	int received;
-	if (name)
+	if (addr)
 	{
-		sockaddr_in sa{};
-		int size = sizeof(sa);
-		received = ::recvfrom(s, &buf[0], max, 0, (sockaddr*)&sa, &size);
+		int size = sizeof(Addr);
+		received = ::recvfrom(s, &buf[0], max, 0, (sockaddr*)addr, &size);
 		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
-		*name = addrToName(sa);
 	}
 	else
 	{
@@ -100,16 +146,14 @@ std::string Socket::recv(int max, Name* name)
 	return std::move(buf);
 }
 
-void Socket::recv(void* buffer, int size, Name* name)
+void Socket::recv(void* buffer, int size, Addr* addr)
 {
 	int received;
-	if (name)
+	if (addr)
 	{
-		sockaddr_in sa{};
-		int size = sizeof(sa);
-		received = ::recvfrom(s, (char*)buffer, size, 0, (sockaddr*)&sa, &size);
+		int size = sizeof(Addr);
+		received = ::recvfrom(s, (char*)buffer, size, 0, (sockaddr*)addr, &size);
 		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
-		*name = addrToName(sa);
 	}
 	else
 	{
@@ -120,21 +164,19 @@ void Socket::recv(void* buffer, int size, Name* name)
 	if (received != size) throw Exception("did not receive correct amount of data");
 }
 
-void Socket::peek(void* buffer, int size, Name* name)
+void Socket::peek(void* buffer, int size, Addr* addr)
 {
 	int received;
-	if (name)
+	if (addr)
 	{
-		sockaddr_in sa{};
-		int size = sizeof(sa);
-		received = ::recvfrom(s, (char*)buffer, size, MSG_PEEK, (sockaddr*)&sa, &size);
+		int size = sizeof(Addr);
+		received = ::recvfrom(s, (char*)buffer, size, MSG_PEEK, (sockaddr*)addr, &size);
 		if (received == SOCKET_ERROR)
 		{
 			int errCode = WSAGetLastError();
 			if (errCode != 10040)
 				throw WSAException("failed to receive data", errCode);
 		}
-		*name = addrToName(sa);
 	}
 	else
 	{

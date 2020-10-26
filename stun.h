@@ -46,6 +46,8 @@ struct StunMessageHeader
 
 EXCEPT(StunException)
 
+std::string ipToStr(uint32_t ip);
+
 void getTransactionId(uint32_t* transactionId);
 
-void stun(Socket& s);
+Addr stun(Socket& s, const Addr& stunServer);

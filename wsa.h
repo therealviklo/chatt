@@ -18,8 +18,37 @@ struct Name
 	unsigned short port;
 };
 
-Name addrToName(const sockaddr_in& addr);
-sockaddr_in nameToAddr(const Name& name);
+union Addr
+{
+	sockaddr_in6 ipv6;
+	sockaddr_in ipv4;
+	ADDRESS_FAMILY family;
+
+	bool operator==(const Addr& o) const noexcept
+	{
+		if (family == o.family)
+		{
+			if (family == AF_INET)
+			{
+				return	ipv4.sin_port == o.ipv4.sin_port &&
+						ipv4.sin_addr.S_un.S_addr == o.ipv4.sin_addr.S_un.S_addr;
+			}
+			else
+			{
+				return	ipv6.sin6_port == o.ipv6.sin6_port &&
+						memcmp(&ipv6.sin6_addr, &o.ipv6.sin6_addr, sizeof(ipv6.sin6_addr));
+			}
+		}
+		return false;
+	}
+	inline bool operator!=(const Addr& o) const noexcept
+	{
+		return !operator==(o);
+	}
+};
+
+Name addrToName(const Addr& addr);
+Addr nameToAddr(const Name& name);
 
 class WSAHandler
 {
@@ -54,19 +83,20 @@ public:
 	EXCEPT(Exception)
 private:
 	UHandle<SOCKET, closesocket, INVALID_SOCKET> s;
+	bool ipv4;
 public:
-	Socket();
+	Socket(bool ipv4);
 
-	Name getName();
+	Addr getAddr();
 
 	void bind(unsigned short port);
 	void setTimeout(DWORD time);
 
-	void send(const Name& name, const std::string& msg);
-	void send(const Name& name, const void* data, int size);
+	void send(const Addr& addr, const std::string& msg);
+	void send(const Addr& addr, const void* data, int size);
 
-	std::string recv(int max, Name* name = nullptr);
-	void recv(void* buffer, int size, Name* name = nullptr);
+	std::string recv(int max, Addr* addr = nullptr);
+	void recv(void* buffer, int size, Addr* addr = nullptr);
 	
-	void peek(void* buffer, int size, Name* name = nullptr);
+	void peek(void* buffer, int size, Addr* addr = nullptr);
 };
