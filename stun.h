@@ -41,13 +41,14 @@ struct StunMessageHeader
 	uint16_t messageType;
 	uint16_t length;
 	uint8_t cookie[4] = {0x21, 0x12, 0xa4, 0x42};
-	uint32_t transactionId[3];
+	uint8_t transactionId[12];
 };
 
 EXCEPT(StunException)
 
 std::string ipToStr(uint32_t ip);
 
-void getTransactionId(uint32_t* transactionId);
+void getTransactionId(uint8_t* transactionId);
+void xorData(void* dest, const void* other, size_t size);
 
 Addr stun(Socket& s, const Addr& stunServer);

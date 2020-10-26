@@ -13,14 +13,19 @@ std::string ipToStr(uint32_t ip)
 	return ss.str();
 }
 
-void getTransactionId(uint32_t* transactionId)
+void getTransactionId(uint8_t* transactionId)
 {
-	for (uint8_t i = 0; i < 3; i++)
+	for (uint8_t i = 0; i < 12; i++)
 	{
-		for (uint8_t j = 0; j < 4; j++)
-		{
-			transactionId[i] += ((rand() & 0xFF) << (j * 8));
-		}
+		transactionId[i] += rand() & 0xFF;
+	}
+}
+
+void xorData(void* dest, const void* other, size_t size)
+{
+	for (size_t i = 0; i < size; i++)
+	{
+		((uint8_t*)dest)[i] ^= ((uint8_t*)other)[i];
 	}
 }
 
@@ -28,7 +33,7 @@ Addr stun(Socket& s, const Addr& stunServer)
 {
 	Addr addr{};
 
-	uint32_t transactionId[3]{};
+	uint8_t transactionId[12]{};
 	getTransactionId(transactionId);
 
 	struct {
@@ -130,14 +135,30 @@ Addr stun(Socket& s, const Addr& stunServer)
 				if (family == 1)
 				{
 					addr.family = AF_INET;
+					
 					addr.ipv4.sin_port = readU16N();
 					addr.ipv4.sin_port ^= 0x1221;
+					
 					addr.ipv4.sin_addr.S_un.S_addr = readU32N();
 					addr.ipv4.sin_addr.S_un.S_addr ^= 0x42a41221;
 				}
 				else if (family == 2)
 				{
-					/* TODO */
+					addr.family = AF_INET6;
+					
+					addr.ipv6.sin6_port = readU16N();
+					addr.ipv6.sin6_port ^= 0x1221;
+					
+					addr.ipv6.sin6_addr.u.Word[0] = readU16N();
+					addr.ipv6.sin6_addr.u.Word[1] = readU16N();
+					addr.ipv6.sin6_addr.u.Word[2] = readU16N();
+					addr.ipv6.sin6_addr.u.Word[3] = readU16N();
+					addr.ipv6.sin6_addr.u.Word[4] = readU16N();
+					addr.ipv6.sin6_addr.u.Word[5] = readU16N();
+					addr.ipv6.sin6_addr.u.Word[6] = readU16N();
+					addr.ipv6.sin6_addr.u.Word[7] = readU16N();
+					xorData(&addr.ipv6.sin6_addr, &req.smh.cookie, 4);
+					xorData(&addr.ipv6.sin6_addr.u.Byte[4], &transactionId, 12);
 				}
 				else throw StunException("unknown address family");
 			}
