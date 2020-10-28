@@ -44,30 +44,12 @@ Addr stun(Socket& s, const Addr& stunServer)
 	memcpy(req.smh.transactionId, transactionId, sizeof(uint32_t[3]));
 
 	StunMessageHeader smh;
-	DWORD timeout = 500;
 	while (true)
 	{
-		s.setTimeout(timeout);
-		Defer tod([&](){
-			s.setTimeout(0);
-		});
-
 		s.send(stunServer, &req, sizeof(req));
 
 		Addr responseAddr;
-		try
-		{
-			s.peek(&smh, sizeof(smh), &responseAddr);
-		}
-		catch (const WSAException& e)
-		{
-			if (e.errCode == 10060)
-			{
-				timeout *= 2;
-				continue;
-			}
-			throw;
-		}
+		s.peek(&smh, sizeof(smh), &responseAddr);
 		if (memcmp(smh.transactionId, transactionId, sizeof(uint32_t[3])) || stunServer != responseAddr)
 		{
 			s.popDatagram();

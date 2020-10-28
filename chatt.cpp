@@ -15,8 +15,19 @@ int main(int argc, char* argv[])
 
 		wsaHandler.initialise();
 
-		MessageProcessor mp(true);
-		mp.stun(nameToAddr({"74.125.200.127", 19302}));
+		ProtocolHandler ph(true);
+
+		Name myName = addrToName(ph.mp.stun(nameToAddr({"74.125.200.127", 19302})));
+		printf("IP: %s\nPort: %d\n", myName.ip.c_str(), myName.port);
+
+		printf("Connect to:\n\tIP: ");
+		char ip[47];
+		scanf("%s", ip);
+		printf("\tPort: ");
+		unsigned short port;
+		scanf("%hu", &port);
+		ph.connect(nameToAddr({ip, port}));
+		while (true);
 	}
 	catch (const WSAException& e)
 	{

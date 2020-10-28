@@ -1,1 +1,1 @@
-@vmake clang++ -std=c++20 -o chatt.exe -lws2_32 -lntdll -luser32 NAMN
+@vmake clang++ -std=c++20 -o chatt.exe -lws2_32 -lntdll -luser32 -D_CRT_SECURE_NO_WARNINGS NAMN
