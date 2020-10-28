@@ -13,14 +13,14 @@ uint64_t generateTransId()
 	return res;
 }
 
-void MessageProcessor::receiverLoop()
+void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV)
 {
 	try
 	{
 		std::unique_lock<std::mutex> receiverUL(recvM);
 		{
-			std::unique_lock<std::mutex> receiverReadyUL(receiverReadyM);
-			receiverReadyCV.notify_all();
+			std::unique_lock<std::mutex> receiverReadyUL(*receiverReadyM);
+			receiverReadyCV->notify_all();
 		}
 		while (true)
 		{
@@ -97,12 +97,14 @@ void MessageProcessor::receiverLoop()
 }
 
 MessageProcessor::MessageProcessor(bool ipv4)
-	: s(ipv4),
-	  receiverReadyUL(receiverReadyM),
-	  receiver(&MessageProcessor::receiverLoop, this)
+	: s(ipv4)
 {
+	std::mutex receiverReadyM;
+	std::condition_variable receiverReadyCV;
+	std::unique_lock<std::mutex> receiverReadyUL(receiverReadyM);
+	std::thread t(&MessageProcessor::receiverLoop, this, &receiverReadyM, &receiverReadyCV);
+	t.swap(receiver);
 	receiverReadyCV.wait(receiverReadyUL);
-	receiverReadyUL.unlock();
 }
 
 MessageProcessor::~MessageProcessor()

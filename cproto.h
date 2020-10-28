@@ -43,13 +43,9 @@ private:
 	std::mutex recvM;
 	std::condition_variable recvCV;
 
-	std::mutex receiverReadyM;
-	std::unique_lock<std::mutex> receiverReadyUL;
-	std::condition_variable receiverReadyCV;
-
 	std::thread receiver;
 
-	void receiverLoop();
+	void receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV);
 public:
 	MessageProcessor(bool ipv4);
 	~MessageProcessor();
