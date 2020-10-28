@@ -191,3 +191,20 @@ void Socket::peek(void* buffer, int size, Addr* addr)
 	if (received == 0) throw ConnectionClosed("connection closed gracefully");
 	if (received > 0 && received < size) throw Exception("did not receive correct amount of data");
 }
+
+void Socket::popDatagram()
+{
+	try
+	{
+		recv(1);
+	}
+	catch (const WSAException& e)
+	{
+		if (e.errCode != 10040) throw;
+	}
+}
+
+void Socket::close()
+{
+	s = INVALID_SOCKET;
+}

@@ -99,4 +99,7 @@ public:
 	void recv(void* buffer, int size, Addr* addr = nullptr);
 	
 	void peek(void* buffer, int size, Addr* addr = nullptr);
+	void popDatagram();
+
+	void close();
 };

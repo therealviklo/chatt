@@ -70,15 +70,7 @@ Addr stun(Socket& s, const Addr& stunServer)
 		}
 		if (memcmp(smh.transactionId, transactionId, sizeof(uint32_t[3])) || stunServer != responseAddr)
 		{
-			// Tar bort datagrammet från kön och börjar om.
-			try
-			{
-				s.recv(1);
-			}
-			catch (const WSAException& e)
-			{
-				if (e.errCode != 10040) throw;
-			}
+			s.popDatagram();
 			continue;
 		}
 
