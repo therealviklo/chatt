@@ -96,28 +96,6 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 	puts("MP exiting");
 }
 
-MessageProcessor::MessageProcessor(bool ipv4)
-	: s(ipv4)
-{
-	std::mutex receiverReadyM;
-	std::condition_variable receiverReadyCV;
-	std::unique_lock<std::mutex> receiverReadyUL(receiverReadyM);
-	std::thread t(&MessageProcessor::receiverLoop, this, &receiverReadyM, &receiverReadyCV);
-	t.swap(receiver);
-	receiverReadyCV.wait(receiverReadyUL);
-}
-
-MessageProcessor::~MessageProcessor()
-{
-	try
-	{
-		s.close();
-		receiver.join();
-	}
-	catch (...) {}
-	puts("MP destructor");
-}
-
 void MessageProcessor::send(const Addr& addr, uint32_t msgType, const void* data, uint64_t size)
 {
 	using namespace std::chrono_literals;
@@ -221,7 +199,7 @@ std::vector<uint8_t> MessageProcessor::recv(Addr* sender)
 	return buffer;
 }
 
-void ProtocolHandler::receiverLoop()
+void MessageProcessor::protocolHandlerLoop()
 {
 	try
 	{
@@ -229,7 +207,7 @@ void ProtocolHandler::receiverLoop()
 		{
 			Addr sender;
 			puts("PH: Starting recv procedure ...");
-			std::vector<uint8_t> msg = mp.recv(&sender);
+			std::vector<uint8_t> msg = recv(&sender);
 			const CHeader& ch = *(CHeader*)&msg[0];
 			puts("PH: recv procedure over");
 			switch (ch.msgType)
@@ -281,25 +259,35 @@ void ProtocolHandler::receiverLoop()
 	puts("PH exiting");
 }
 
-ProtocolHandler::ProtocolHandler(bool ipv4)
-	: mp(ipv4),
-	  receiver(&ProtocolHandler::receiverLoop, this) {}
-
-ProtocolHandler::~ProtocolHandler()
+MessageProcessor::MessageProcessor(bool ipv4)
+	: s(ipv4)
 {
-	puts("PH destructor");
-	mp.s.close();
-	receiver.join();
+	std::mutex receiverReadyM;
+	std::condition_variable receiverReadyCV;
+	std::unique_lock<std::mutex> receiverReadyUL(receiverReadyM);
+	std::thread t(&MessageProcessor::receiverLoop, this, &receiverReadyM, &receiverReadyCV);
+	t.swap(receiver);
+	receiverReadyCV.wait(receiverReadyUL);
+
+	std::thread t2(&MessageProcessor::protocolHandlerLoop, this);
+	t2.swap(protocolHandler);
 }
 
-void ProtocolHandler::connect(const Addr& addr)
+MessageProcessor::~MessageProcessor()
+{
+	s.close();
+	receiver.join();
+	protocolHandler.join();
+}
+
+void MessageProcessor::connect(const Addr& addr)
 {
 	std::unique_lock ul(conns_m);
 	if (std::find(conns.begin(), conns.end(), addr) == conns.end())
 	{
 		ul.unlock();
 
-		mp.send(addr, MsgType::conn, nullptr, 0);
+		send(addr, MsgType::conn, nullptr, 0);
 
 		ul.lock();
 		if (std::find(conns.begin(), conns.end(), addr) == conns.end())

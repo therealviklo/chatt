@@ -25,11 +25,8 @@ struct CHeader
 
 uint64_t generateTransId();
 
-class ProtocolHandler;
-
 class MessageProcessor
 {
-	friend ProtocolHandler;
 public:
 	EXCEPT(NotRespondingException)
 private:
@@ -43,39 +40,27 @@ private:
 	std::mutex recvM;
 	std::condition_variable recvCV;
 
+	std::mutex conns_m;
+	std::vector<Addr> conns;
+	
 	std::thread receiver;
 
+	std::thread protocolHandler;
+
 	void receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV);
+	
+	std::vector<uint8_t> recv(Addr* sender);
+	void protocolHandlerLoop();
 public:
 	MessageProcessor(bool ipv4);
 	~MessageProcessor();
 
 	MessageProcessor(const MessageProcessor&) = delete;
 	MessageProcessor& operator=(const MessageProcessor&) = delete;
-
+	
 	inline Addr stun(const Addr& stunServer) { return ::stun(s, stunServer); }
 
 	void send(const Addr& addr, uint32_t msgType, const void* data, uint64_t size);
-	std::vector<uint8_t> recv(Addr* sender);
-};
-
-class ProtocolHandler
-{
-public:
-	MessageProcessor mp;
-private:
-	std::mutex conns_m;
-	std::vector<Addr> conns;
-
-	std::thread receiver;
-
-	void receiverLoop();
-public:
-	ProtocolHandler(bool ipv4);
-	~ProtocolHandler();
-
-	ProtocolHandler(const ProtocolHandler&) = delete;
-	ProtocolHandler& operator=(const ProtocolHandler&) = delete;
 
 	void connect(const Addr& addr);
 };
