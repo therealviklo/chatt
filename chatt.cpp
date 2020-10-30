@@ -17,8 +17,8 @@ int main(int argc, char* argv[])
 
 		MessageProcessor mp(true);
 
-		Name myName = addrToName(mp.stun(nameToAddr({"74.125.200.127", 19302})));
-		printf("IP: %s\nPort: %d\n", myName.ip.c_str(), myName.port);
+		// Name myName = addrToName(mp.stun(nameToAddr({"74.125.200.127", 19302})));
+		// printf("IP: %s\nPort: %d\n", myName.ip.c_str(), myName.port);
 
 		printf("Connect to:\n\tIP: ");
 		char ip[47];

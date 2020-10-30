@@ -28,7 +28,6 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 			CHeader ch;
 			try
 			{
-				puts("MP: Peeking...");
 				s.peek(&ch, sizeof(ch), &sender);
 			}
 			catch (const WSAException& e)
@@ -39,13 +38,11 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 			}
 			catch (const Socket::ConnectionClosed& e)
 			{
-				puts("MP: Exception! (A)");
 				s.popDatagram();
 				continue;
 			}
 			catch (const Socket::Exception& e)
 			{
-				puts("MP: Exception! (B)");
 				s.popDatagram();
 				continue;
 			}
@@ -62,7 +59,6 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 			
 			if (ch.msgType == MsgType::recv)
 			{
-				puts("MP: Success");
 				std::lock_guard lg(cvs_m);
 				if (cvs.count(ch.transId))
 				{
@@ -89,7 +85,6 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 				break;
 				case MsgType::conn:
 				{
-					puts("MP: conn");
 					std::lock_guard lg(conns_m);
 					if (std::find(conns.begin(), conns.end(), sender) == conns.end())
 						conns.push_back(sender);
@@ -157,13 +152,14 @@ regenId:
 			return;
 		}
 	}
-	puts("Throwing...");
 	throw NotRespondingException("peer is not responding");
 }
 
 MessageProcessor::MessageProcessor(bool ipv4)
 	: s(ipv4)
 {
+	s.bind(0);
+
 	std::mutex receiverReadyM;
 	std::condition_variable receiverReadyCV;
 	std::unique_lock<std::mutex> receiverReadyUL(receiverReadyM);
