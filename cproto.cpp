@@ -152,6 +152,7 @@ regenId:
 			return;
 		}
 	}
+	cvs.erase(ch.transId);
 	throw NotRespondingException("peer is not responding");
 }
 
