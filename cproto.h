@@ -10,7 +10,7 @@
 namespace MsgType
 {
 	enum {
-		succ = 0x63637573,
+		recv = 0x76636572,
 		conn = 0x6e6e6f63
 	};
 }
@@ -43,14 +43,16 @@ private:
 	std::mutex conns_m;
 	std::vector<Addr> conns;
 	
+	std::mutex closeMutex;
+
 	std::thread receiver;
 
-	std::thread protocolHandler;
+	// std::thread protocolHandler;
 
 	void receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV);
-	
-	std::vector<uint8_t> recv(Addr* sender);
-	void protocolHandlerLoop();
+
+	// std::vector<uint8_t> recv(Addr* sender);
+	// void protocolHandlerLoop();
 public:
 	MessageProcessor(bool ipv4);
 	~MessageProcessor();

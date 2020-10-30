@@ -175,7 +175,7 @@ void Socket::peek(void* buffer, int size, Addr* addr)
 		{
 			int errCode = WSAGetLastError();
 			if (errCode != 10040)
-				throw WSAException("failed to receive data", errCode);
+				throw WSAException("failed to peek data", errCode);
 		}
 	}
 	else
@@ -185,7 +185,7 @@ void Socket::peek(void* buffer, int size, Addr* addr)
 		{
 			int errCode = WSAGetLastError();
 			if (errCode != 10040)
-				throw WSAException("failed to receive data", errCode);
+				throw WSAException("failed to peek data", errCode);
 		}
 	}
 	if (received == 0) throw ConnectionClosed("connection closed gracefully");

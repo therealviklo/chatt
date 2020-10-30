@@ -24,11 +24,18 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 		}
 		while (true)
 		{
+			Addr sender;
 			CHeader ch;
 			try
 			{
 				puts("MP: Peeking...");
-				s.peek(&ch, sizeof(ch));
+				s.peek(&ch, sizeof(ch), &sender);
+			}
+			catch (const WSAException& e)
+			{
+				std::unique_lock closeLock(closeMutex, std::defer_lock);
+				if (!closeLock.try_lock()) return;
+				throw;
 			}
 			catch (const Socket::ConnectionClosed& e)
 			{
@@ -43,14 +50,17 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 				continue;
 			}
 
+			std::unique_lock closeLock(closeMutex, std::defer_lock);
+			if (!closeLock.try_lock()) return;
+
 			if (ch.c != 'C')
 			{
 				puts("MP: Strange message");
 				s.popDatagram();
 				continue;
 			}
-
-			if (ch.msgType == MsgType::succ)
+			
+			if (ch.msgType == MsgType::recv)
 			{
 				puts("MP: Success");
 				std::lock_guard lg(cvs_m);
@@ -58,12 +68,36 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 				{
 					cvs.at(ch.transId).notify_all();
 				}
-				s.popDatagram();
 				continue;
 			}
 
-			puts("MP: Not for me");
-			recvCV.wait(receiverUL);
+			CHeader succMsg{};
+			succMsg.transId = ch.transId;
+			succMsg.msgType = MsgType::recv;
+			succMsg.msgSize = sizeof(CHeader);
+			try
+			{
+				s.send(sender, &succMsg, sizeof(succMsg));
+			}
+			catch (const WSAException& e) {}
+
+			std::vector<uint8_t> data(ch.msgSize);
+			s.recv(&data[0], data.size());
+
+			switch (ch.msgType)
+			{
+				break;
+				case MsgType::conn:
+				{
+					puts("MP: conn");
+					std::lock_guard lg(conns_m);
+					if (std::find(conns.begin(), conns.end(), sender) == conns.end())
+						conns.push_back(sender);
+					Name name = addrToName(sender);
+					printf("Connected:\n\tIP: %s\n\tPort: %hu\n", name.ip.c_str(), name.port);
+				}
+				break;
+			}
 		}
 	}
 	catch (const WSAException& e)
@@ -127,138 +161,6 @@ regenId:
 	throw NotRespondingException("peer is not responding");
 }
 
-std::vector<uint8_t> MessageProcessor::recv(Addr* sender)
-{
-	std::vector<uint8_t> buffer;
-	while (true)
-	{
-		std::unique_lock<std::mutex> receiverUL(recvM);
-		Defer d([&](){
-			recvCV.notify_all();
-		});
-
-		CHeader ch;
-		puts("PH: Peeking...");
-		s.peek(&ch, sizeof(ch), sender);
-
-		if (ch.c != 'C')
-		{
-			puts("PH: Not for me (A)");
-			continue;
-		}
-		if (ch.msgType == MsgType::succ)
-		{
-			puts("PH: Not for me (B)");
-			continue;
-		}
-
-		buffer.resize(ch.msgSize);
-		try
-		{
-			puts("PH: Receiving ...");
-			s.recv(&buffer[0], buffer.size());
-		}
-		catch (const Socket::ConnectionClosed& e)
-		{
-			puts("PH: Exception! (C)");
-			continue;
-		}
-		catch (const Socket::Exception& e)
-		{
-			puts("PH: Exception! (D)");
-			continue;
-		}
-
-		if (recentMsgs.count(ch.transId))
-		{
-			if (difftime(time(nullptr), recentMsgs.at(ch.transId)) > 300)
-			{
-				recentMsgs.erase(ch.transId);
-			}
-			else
-			{
-				puts("PH: Already received");
-				continue;
-			}
-		}
-		recentMsgs.insert({ch.transId, time(nullptr)});
-
-		CHeader succMsg{};
-		succMsg.transId = ch.transId;
-		succMsg.msgType = MsgType::succ;
-		succMsg.msgSize = sizeof(CHeader);
-		try
-		{
-			s.send(*sender, &succMsg, sizeof(succMsg));
-		}
-		catch (const WSAException& e) {}
-
-		puts("PH: Breaking ...");
-		break;
-	}
-	return buffer;
-}
-
-void MessageProcessor::protocolHandlerLoop()
-{
-	try
-	{
-		while (true)
-		{
-			Addr sender;
-			puts("PH: Starting recv procedure ...");
-			std::vector<uint8_t> msg = recv(&sender);
-			const CHeader& ch = *(CHeader*)&msg[0];
-			puts("PH: recv procedure over");
-			switch (ch.msgType)
-			{
-				case MsgType::conn:
-				{
-					puts("PH: conn");
-					std::lock_guard lg(conns_m);
-					if (std::find(conns.begin(), conns.end(), sender) == conns.end())
-						conns.push_back(sender);
-					Name name = addrToName(sender);
-					printf("Connected:\n\tIP: %s\n\tPort: %hu\n", name.ip.c_str(), name.port);
-				}
-				break;
-			}
-			puts("PH: Looping ...");
-		}
-	}
-	catch (const WSAException& e)
-	{
-		if (e.errCode != 10004)
-		{
-			std::stringstream ss;
-			ss << e.what();
-			ss << "\r\nError code: ";
-			ss << e.errCode;
-			puts(ss.str().c_str());
-			MessageBoxA(
-				nullptr,
-				ss.str().c_str(),
-				"Error in protocol handler thread",
-				MB_ICONERROR | MB_TASKMODAL
-			);
-			throw;
-		}
-	}
-	catch (const std::exception& e)
-	{
-		puts(e.what());
-		MessageBoxA(nullptr, e.what(), "Error in protocol handler thread", MB_ICONERROR | MB_TASKMODAL);
-		throw;
-	}
-	catch (...)
-	{
-		puts("Unknown error");
-		MessageBoxW(nullptr, L"Unknown error", L"Error in protocol handler thread", MB_ICONERROR | MB_TASKMODAL);
-		throw;
-	}
-	puts("PH exiting");
-}
-
 MessageProcessor::MessageProcessor(bool ipv4)
 	: s(ipv4)
 {
@@ -268,16 +170,13 @@ MessageProcessor::MessageProcessor(bool ipv4)
 	std::thread t(&MessageProcessor::receiverLoop, this, &receiverReadyM, &receiverReadyCV);
 	t.swap(receiver);
 	receiverReadyCV.wait(receiverReadyUL);
-
-	std::thread t2(&MessageProcessor::protocolHandlerLoop, this);
-	t2.swap(protocolHandler);
 }
 
 MessageProcessor::~MessageProcessor()
 {
+	std::lock_guard lg(closeMutex);
 	s.close();
 	receiver.join();
-	protocolHandler.join();
 }
 
 void MessageProcessor::connect(const Addr& addr)
