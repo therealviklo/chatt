@@ -4,6 +4,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <chrono>
+#include <queue>
 #include "wsa.h"
 #include "stun.h"
 
@@ -11,9 +12,15 @@ namespace MsgType
 {
 	enum {
 		recv = 0x76636572,
-		conn = 0x6e6e6f63
+		conn = 0x6e6e6f63,
+		text = 0x74786574
 	};
 }
+
+struct DistrId
+{
+	uint8_t bytes[16];
+};
 
 struct CHeader
 {
@@ -21,6 +28,11 @@ struct CHeader
 	uint64_t transId;
 	uint32_t msgType;
 	uint64_t msgSize;
+};
+
+struct TextHeader
+{
+	DistrId distrId;
 };
 
 uint64_t generateTransId();
@@ -36,23 +48,28 @@ private:
 	std::unordered_map<uint64_t, std::condition_variable> cvs;
 
 	std::unordered_map<uint64_t, time_t> recentMsgs;
+	std::unordered_map<DistrId, time_t> recentDistrMsgs;
 
 	std::mutex recvM;
 	std::condition_variable recvCV;
 
 	std::mutex conns_m;
 	std::vector<Addr> conns;
+
+	std::mutex distributors_m;
+	std::condition_variable distributors_cv;
+	std::vector<std::thread> distributors;
+	std::thread distributorJoiner;
 	
+	bool closing;
 	std::mutex closeMutex;
 
 	std::thread receiver;
 
-	// std::thread protocolHandler;
+	void distributeMessage(Addr from, std::vector<uint8_t> msg);
 
+	void distributorJoinerLoop();
 	void receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV);
-
-	// std::vector<uint8_t> recv(Addr* sender);
-	// void protocolHandlerLoop();
 public:
 	MessageProcessor(bool ipv4);
 	~MessageProcessor();

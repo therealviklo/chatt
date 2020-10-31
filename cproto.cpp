@@ -13,6 +13,85 @@ uint64_t generateTransId()
 	return res;
 }
 
+void MessageProcessor::distributeMessage(Addr from, std::vector<uint8_t> msg)
+{
+	std::vector<std::thread> threads;
+
+	{
+		std::lock_guard lg(conns_m);
+		for (const auto& conn : conns)
+		{
+			if (conn != from)
+			{
+				threads.push_back(std::thread([&](){
+					try
+					{
+						send(conn, ((CHeader*)&msg[0])->msgType, &msg[sizeof(CHeader)], msg.size() - sizeof(CHeader));
+					}
+					catch (...) {}
+				}));
+			}
+		}
+	}
+
+	for (auto& thr : threads)
+	{
+		thr.join();
+	}
+}
+
+void MessageProcessor::distributorJoinerLoop()
+{
+	try
+	{
+		while (true)
+		{
+			std::thread* currThr = nullptr;
+			{
+				std::unique_lock ul(distributors_m);
+				while (!distributors.size())
+				{
+					if (closing) return;
+					distributors_cv.wait(ul);
+				}
+				currThr = &distributors[0];
+			}
+			currThr->join();
+			{
+				std::lock_guard lg(distributors_m);
+				distributors.erase(distributors.begin());
+			}
+		}
+	}
+	catch (const WSAException& e)
+	{
+		if (e.errCode != 10004)
+		{
+			std::stringstream ss;
+			ss << e.what();
+			ss << "\r\nError code: ";
+			ss << e.errCode;
+			MessageBoxA(
+				nullptr,
+				ss.str().c_str(),
+				"Error in distribution thread joiner thread",
+				MB_ICONERROR | MB_TASKMODAL
+			);
+			throw;
+		}
+	}
+	catch (const std::exception& e)
+	{
+		MessageBoxA(nullptr, e.what(), "Error in distribution thread joiner thread", MB_ICONERROR | MB_TASKMODAL);
+		throw;
+	}
+	catch (...)
+	{
+		MessageBoxW(nullptr, L"Unknown error", L"Error in distribution thread joiner thread", MB_ICONERROR | MB_TASKMODAL);
+		throw;
+	}
+}
+
 void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV)
 {
 	try
@@ -82,6 +161,26 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 
 			switch (ch.msgType)
 			{
+				case MsgType::text:
+				{
+					const DistrId& distrId = ((TextHeader*)&data[sizeof(CHeader)])->distrId;
+					if (recentDistrMsgs.count(distrId))
+					{
+						if (difftime(time(nullptr), recentDistrMsgs.at(distrId)) > 120.0)
+						{
+							recentDistrMsgs.erase(distrId);
+						}
+						else break;
+					}
+
+					std::lock_guard lg(distributors_m);
+					distributors.push_back(std::thread(
+						&MessageProcessor::distributeMessage,
+						this,
+						sender,
+						std::move(data)
+					));
+				}
 				break;
 				case MsgType::conn:
 				{
@@ -122,7 +221,6 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 		MessageBoxW(nullptr, L"Unknown error", L"Error in message processing thread", MB_ICONERROR | MB_TASKMODAL);
 		throw;
 	}
-	puts("MP exiting");
 }
 
 void MessageProcessor::send(const Addr& addr, uint32_t msgType, const void* data, uint64_t size)
@@ -157,7 +255,9 @@ regenId:
 }
 
 MessageProcessor::MessageProcessor(bool ipv4)
-	: s(ipv4)
+	: s(ipv4),
+	  closing(false),
+	  distributorJoiner(&MessageProcessor::distributorJoinerLoop, this)
 {
 	s.bind(0);
 
@@ -171,9 +271,15 @@ MessageProcessor::MessageProcessor(bool ipv4)
 
 MessageProcessor::~MessageProcessor()
 {
+	closing = true;
 	std::lock_guard lg(closeMutex);
 	s.close();
 	receiver.join();
+	{
+		std::lock_guard lg2(distributors_m);
+		distributors_cv.notify_all();
+	}
+	distributorJoiner.join();
 }
 
 void MessageProcessor::connect(const Addr& addr)
