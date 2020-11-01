@@ -15,7 +15,6 @@ uint64_t generateTransId()
 	{
 		bytes[i] = random() & 0xFF;
 	}
-	printf("Generated: %zu\n", res);
 	return res;
 }
 
@@ -152,13 +151,17 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 				continue;
 			}
 			
+			printf("Received:\n\tTransID: %zu\n", ch.transId);
+			
 			if (ch.msgType == MsgType::recv)
 			{
+				printf("\tType: recv\n");
 				std::lock_guard lg(cvs_m);
 				if (cvs.count(ch.transId))
 				{
 					cvs.at(ch.transId).notify_all();
 				}
+				s.popDatagram();
 				continue;
 			}
 
@@ -171,8 +174,6 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 				s.send(sender, &succMsg, sizeof(succMsg));
 			}
 			catch (const WSAException& e) {}
-
-			printf("Received:\n\tTransID: %zu\n", ch.transId);
 
 			if (recentMsgs.count(ch.transId))
 			{
@@ -305,7 +306,9 @@ regenId:
 			cvs.erase(ch.transId);
 			return;
 		}
+		puts("\t(Resending)");
 	}
+	puts("\t(Giving up)");
 	cvs.erase(ch.transId);
 	throw NotRespondingException("peer is not responding");
 }
