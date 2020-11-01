@@ -1,5 +1,10 @@
 #include "cproto.h"
 
+size_t std::hash<DistrId>::operator()(const DistrId& did) const
+{
+	return *(uint64_t*)&did.bytes[0] + *(uint64_t*)&did.bytes[8];
+}
+
 uint64_t generateTransId()
 {
 	union {
@@ -8,9 +13,20 @@ uint64_t generateTransId()
 	};
 	for (uint8_t i = 0; i < 8; i++)
 	{
-		bytes[i] = rand() & 0xFF;
+		bytes[i] = random() & 0xFF;
 	}
+	printf("Generated: %zu\n", res);
 	return res;
+}
+
+DistrId generateDistrId()
+{
+	DistrId id;
+	for (uint8_t i = 0; i < sizeof(id); i++)
+	{
+		id.bytes[i] = random() & 0xFF;
+	}
+	return id;
 }
 
 void MessageProcessor::distributeMessage(Addr from, std::vector<uint8_t> msg)
@@ -156,6 +172,24 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 			}
 			catch (const WSAException& e) {}
 
+			printf("Received:\n\tTransID: %zu\n", ch.transId);
+
+			if (recentMsgs.count(ch.transId))
+			{
+				if (difftime(time(nullptr), recentMsgs.at(ch.transId)) > 120.0)
+				{
+					printf("\t(Already received, but old)\n");
+					recentMsgs.erase(ch.transId);
+				}
+				else
+				{
+					printf("\t(Already received)\n");
+					s.popDatagram();
+					continue;
+				}
+			}
+			recentMsgs.emplace(ch.transId, time(nullptr));
+
 			std::vector<uint8_t> data(ch.msgSize);
 			s.recv(&data[0], data.size());
 
@@ -163,15 +197,26 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 			{
 				case MsgType::text:
 				{
+					printf("\tType: text\n");
+
 					const DistrId& distrId = ((TextHeader*)&data[sizeof(CHeader)])->distrId;
+					printf("\tDistrID: %zu-%zu\n", *(uint64_t*)&distrId.bytes[0], *(uint64_t*)&distrId.bytes[8]);
 					if (recentDistrMsgs.count(distrId))
 					{
 						if (difftime(time(nullptr), recentDistrMsgs.at(distrId)) > 120.0)
 						{
+							printf("\t(Already received, but old)\n");
 							recentDistrMsgs.erase(distrId);
 						}
-						else break;
+						else
+						{
+							printf("\t(Already received)\n");
+							break;
+						}
 					}
+					recentDistrMsgs.emplace(distrId, time(nullptr));
+
+					printf("\tText: %s\n", &data[sizeof(CHeader) + sizeof(TextHeader)]);
 
 					std::lock_guard lg(distributors_m);
 					distributors.push_back(std::thread(
@@ -184,6 +229,8 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 				break;
 				case MsgType::conn:
 				{
+					printf("\tType: conn\n");
+
 					std::lock_guard lg(conns_m);
 					if (std::find(conns.begin(), conns.end(), sender) == conns.end())
 						conns.push_back(sender);
@@ -234,12 +281,21 @@ void MessageProcessor::send(const Addr& addr, uint32_t msgType, const void* data
 	ch.msgSize = sizeof(CHeader) + size;
 	memcpy(&msg[sizeof(CHeader)], data, size);
 
-regenId:	
+regenId:
 	ch.transId = generateTransId();
 	
 	std::unique_lock<std::mutex> ul(cvs_m);
 	if (cvs.count(ch.transId)) goto regenId;
 	cvs[ch.transId]; // Ser konstigt ut men det här kan inserta.
+
+	printf(
+		"Sending:\n\tTransID: %zu\n\tType: %c%c%c%c\n",
+		ch.transId,
+		msgType & 0xFF,
+		(msgType >> 8) & 0xFF,
+		(msgType >> 16) & 0xFF,
+		(msgType >> 24) & 0xFF
+	);
 
 	for (char i = 0; i < 3; i++)
 	{
@@ -254,12 +310,58 @@ regenId:
 	throw NotRespondingException("peer is not responding");
 }
 
+void MessageProcessor::sendMessage(const std::string& message)
+{
+	std::vector<uint8_t> msg(sizeof(TextHeader) + message.size());
+
+	memcpy(&msg[sizeof(TextHeader)], message.data(), message.size());
+	
+	DistrId& distrId = ((TextHeader*)&msg[0])->distrId;
+regenId:
+	distrId = generateDistrId();
+	if (recentDistrMsgs.count(distrId))
+	{
+		if (difftime(time(nullptr), recentDistrMsgs.at(distrId)) > 120.0)
+		{
+			recentDistrMsgs.erase(distrId);
+		}
+		else goto regenId;
+	}
+
+	std::lock_guard lg(distributors_m);
+	distributors.push_back(std::thread([this](std::vector<uint8_t> msg){
+		std::vector<std::thread> threads;
+
+		{
+			std::lock_guard lg(conns_m);
+			for (const auto& conn : conns)
+			{
+				threads.push_back(std::thread([&](){
+					try
+					{
+						send(conn, MsgType::text, &msg[0], msg.size());
+					}
+					catch (...) {}
+				}));
+			}
+		}
+
+		for (auto& thr : threads)
+		{
+			thr.join();
+		}
+	}, std::move(msg)));
+}
+
 MessageProcessor::MessageProcessor(bool ipv4)
 	: s(ipv4),
 	  closing(false),
 	  distributorJoiner(&MessageProcessor::distributorJoinerLoop, this)
 {
 	s.bind(0);
+	
+	Name myName = addrToName(stun(nameToAddr({"74.125.200.127", 19302})));
+	printf("IP: %s\nPort: %d\n", myName.ip.c_str(), myName.port);
 
 	std::mutex receiverReadyM;
 	std::condition_variable receiverReadyCV;

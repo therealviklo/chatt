@@ -3,10 +3,12 @@
 #include <thread>
 #include <mutex>
 #include <unordered_map>
+#include <map>
 #include <chrono>
 #include <queue>
 #include "wsa.h"
 #include "stun.h"
+#include "random.h"
 
 namespace MsgType
 {
@@ -20,6 +22,20 @@ namespace MsgType
 struct DistrId
 {
 	uint8_t bytes[16];
+
+	constexpr bool operator==(const DistrId& o) const noexcept
+	{
+		for (unsigned i = 0; i < sizeof(bytes); i++)
+		{
+			if (bytes[i] != o.bytes[i]) return false;
+		}
+		return true;
+	}
+};
+template <>
+struct std::hash<DistrId>
+{
+	size_t operator()(const DistrId& did) const;
 };
 
 struct CHeader
@@ -36,6 +52,7 @@ struct TextHeader
 };
 
 uint64_t generateTransId();
+DistrId generateDistrId();
 
 class MessageProcessor
 {
@@ -80,6 +97,7 @@ public:
 	inline Addr stun(const Addr& stunServer) { return ::stun(s, stunServer); }
 
 	void send(const Addr& addr, uint32_t msgType, const void* data, uint64_t size);
+	void sendMessage(const std::string& message);
 
 	void connect(const Addr& addr);
 };

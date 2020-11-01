@@ -17,7 +17,7 @@ void getTransactionId(uint8_t* transactionId)
 {
 	for (uint8_t i = 0; i < 12; i++)
 	{
-		transactionId[i] += rand() & 0xFF;
+		transactionId[i] += random() & 0xFF;
 	}
 }
 

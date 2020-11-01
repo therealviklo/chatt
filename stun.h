@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include "wsa.h"
+#include "random.h"
 
 namespace MessageType
 {
