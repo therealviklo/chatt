@@ -55,6 +55,67 @@ void MessageProcessor::distributeMessage(Addr from, std::vector<uint8_t> msg)
 	}
 }
 
+void MessageProcessor::idCleanerLoop()
+{
+	try
+	{
+		using namespace std::chrono_literals;
+		std::unique_lock ul(msgs_m);
+		while (msgs_cv.wait_for(ul, 2min) == std::cv_status::timeout)
+		{
+			for (auto i = recentMsgs.begin(); i != recentMsgs.end(); )
+			{
+				if (difftime(time(nullptr), i->second) > 120.0)
+				{
+					i = recentMsgs.erase(i);
+				}
+				else
+				{
+					i++;
+				}
+			}
+			for (auto i = recentDistrMsgs.begin(); i != recentDistrMsgs.end(); )
+			{
+				if (difftime(time(nullptr), i->second) > 120.0)
+				{
+					i = recentDistrMsgs.erase(i);
+				}
+				else
+				{
+					i++;
+				}
+			}
+		}
+	}
+	catch (const WSAException& e)
+	{
+		if (e.errCode != 10004)
+		{
+			std::stringstream ss;
+			ss << e.what();
+			ss << "\r\nError code: ";
+			ss << e.errCode;
+			MessageBoxA(
+				nullptr,
+				ss.str().c_str(),
+				"Error in ID cleaning thread",
+				MB_ICONERROR | MB_TASKMODAL
+			);
+			throw;
+		}
+	}
+	catch (const std::exception& e)
+	{
+		MessageBoxA(nullptr, e.what(), "Error in ID cleaning thread", MB_ICONERROR | MB_TASKMODAL);
+		throw;
+	}
+	catch (...)
+	{
+		MessageBoxW(nullptr, L"Unknown error", L"Error in ID cleaning thread", MB_ICONERROR | MB_TASKMODAL);
+		throw;
+	}
+}
+
 void MessageProcessor::distributorJoinerLoop()
 {
 	try
@@ -175,21 +236,24 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 			}
 			catch (const WSAException& e) {}
 
-			if (recentMsgs.count(ch.transId))
 			{
-				if (difftime(time(nullptr), recentMsgs.at(ch.transId)) > 120.0)
+				std::lock_guard lg(msgs_m);
+				if (recentMsgs.count(ch.transId))
 				{
-					printf("\t(Already received, but old)\n");
-					recentMsgs.erase(ch.transId);
+					if (difftime(time(nullptr), recentMsgs.at(ch.transId)) > 120.0)
+					{
+						printf("\t(Already received, but old)\n");
+						recentMsgs.erase(ch.transId);
+					}
+					else
+					{
+						printf("\t(Already received)\n");
+						s.popDatagram();
+						continue;
+					}
 				}
-				else
-				{
-					printf("\t(Already received)\n");
-					s.popDatagram();
-					continue;
-				}
+				recentMsgs.emplace(ch.transId, time(nullptr));
 			}
-			recentMsgs.emplace(ch.transId, time(nullptr));
 
 			std::vector<uint8_t> data(ch.msgSize);
 			s.recv(&data[0], data.size());
@@ -202,20 +266,23 @@ void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_v
 
 					const DistrId& distrId = ((TextHeader*)&data[sizeof(CHeader)])->distrId;
 					printf("\tDistrID: %zu-%zu\n", *(uint64_t*)&distrId.bytes[0], *(uint64_t*)&distrId.bytes[8]);
-					if (recentDistrMsgs.count(distrId))
 					{
-						if (difftime(time(nullptr), recentDistrMsgs.at(distrId)) > 120.0)
+						std::lock_guard lg(msgs_m);
+						if (recentDistrMsgs.count(distrId))
 						{
-							printf("\t(Already received, but old)\n");
-							recentDistrMsgs.erase(distrId);
+							if (difftime(time(nullptr), recentDistrMsgs.at(distrId)) > 120.0)
+							{
+								printf("\t(Already received, but old)\n");
+								recentDistrMsgs.erase(distrId);
+							}
+							else
+							{
+								printf("\t(Already received)\n");
+								break;
+							}
 						}
-						else
-						{
-							printf("\t(Already received)\n");
-							break;
-						}
+						recentDistrMsgs.emplace(distrId, time(nullptr));
 					}
-					recentDistrMsgs.emplace(distrId, time(nullptr));
 
 					printf("\tText: %s\n", &data[sizeof(CHeader) + sizeof(TextHeader)]);
 
@@ -359,6 +426,7 @@ regenId:
 MessageProcessor::MessageProcessor(bool ipv4)
 	: s(ipv4),
 	  closing(false),
+	  idCleaner(&MessageProcessor::idCleanerLoop, this),
 	  distributorJoiner(&MessageProcessor::distributorJoinerLoop, this)
 {
 	s.bind(0);
@@ -379,12 +447,20 @@ MessageProcessor::~MessageProcessor()
 	closing = true;
 	std::lock_guard lg(closeMutex);
 	s.close();
+	
 	receiver.join();
+	
 	{
 		std::lock_guard lg2(distributors_m);
 		distributors_cv.notify_all();
 	}
 	distributorJoiner.join();
+
+	{
+		std::lock_guard lg3(msgs_m);
+		msgs_cv.notify_all();
+	}
+	idCleaner.join();
 }
 
 void MessageProcessor::connect(const Addr& addr)

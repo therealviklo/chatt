@@ -64,6 +64,8 @@ private:
 	std::mutex cvs_m;
 	std::unordered_map<uint64_t, std::condition_variable> cvs;
 
+	std::mutex msgs_m;
+	std::condition_variable msgs_cv;
 	std::unordered_map<uint64_t, time_t> recentMsgs;
 	std::unordered_map<DistrId, time_t> recentDistrMsgs;
 
@@ -76,15 +78,17 @@ private:
 	std::mutex distributors_m;
 	std::condition_variable distributors_cv;
 	std::vector<std::thread> distributors;
-	std::thread distributorJoiner;
 	
 	bool closing;
 	std::mutex closeMutex;
 
+	std::thread idCleaner;
+	std::thread distributorJoiner;
 	std::thread receiver;
 
 	void distributeMessage(Addr from, std::vector<uint8_t> msg);
 
+	void idCleanerLoop();
 	void distributorJoinerLoop();
 	void receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV);
 public:
