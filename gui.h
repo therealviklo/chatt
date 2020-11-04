@@ -2,6 +2,8 @@
 #include "window.h"
 #include "cproto.h"
 
+// GUI. (Inte riktigt klart än.)
+
 class MainWindow : public Window
 {
 private:
