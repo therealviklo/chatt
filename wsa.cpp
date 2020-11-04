@@ -4,16 +4,34 @@ WSAHandler wsaHandler;
 
 Name addrToName(const Addr& addr)
 {
-	char buf[47];
+	std::stringstream ss;
 	if (addr.family == AF_INET)
 	{
-		RtlIpv4AddressToStringA(&addr.ipv4.sin_addr, buf);
-		return {buf, ntohs(addr.ipv4.sin_port)};
+		ss << addr.ipv4.sin_addr.S_un.S_un_b.s_b1 << '.'
+		   << addr.ipv4.sin_addr.S_un.S_un_b.s_b2 << '.'
+		   << addr.ipv4.sin_addr.S_un.S_un_b.s_b3 << '.'
+		   << addr.ipv4.sin_addr.S_un.S_un_b.s_b4;
+		return {ss.str(), ntohs(addr.ipv4.sin_port)};
 	}
 	else if (addr.family == AF_INET6)
 	{
-		RtlIpv6AddressToStringA(&addr.ipv6.sin6_addr, buf);
-		return {buf, ntohs(addr.ipv6.sin6_port)};
+		ss << addr.ipv6.sin6_addr.u.Byte[0] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[1] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[2] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[3] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[4] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[5] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[6] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[7] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[8] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[9] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[10] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[11] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[12] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[13] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[14] << ":"
+		   << addr.ipv6.sin6_addr.u.Byte[15] << ":";
+		return {ss.str(), ntohs(addr.ipv6.sin6_port)};
 	}
 	else
 	{
@@ -28,17 +46,18 @@ Addr nameToAddr(const Name& name)
 	{
 		sa.ipv4.sin_family = AF_INET;
 		sa.ipv4.sin_port = htons(name.port);
-		const char* end;
-		if (RtlIpv4StringToAddressA(name.ip.c_str(), FALSE, &end, &sa.ipv4.sin_addr))
-			throw AddressException("failed to convert IP address");
+
+		const char* currChar = name.ip.c_str();
+		for (int i = 0; i < 4; i++)
+		{
+			reinterpret_cast<uint8_t*>(&sa.ipv4.sin_addr.S_un.S_un_b)[i] = strtol(currChar, (char**)&currChar, 10);
+			if (*currChar == '.') currChar++;
+		}
 	}
 	else
 	{
-		sa.ipv6.sin6_family = AF_INET6;
-		sa.ipv6.sin6_port = htons(name.port);
-		const char* end;
-		if (RtlIpv6StringToAddressA(name.ip.c_str(), &end, &sa.ipv6.sin6_addr))
-			throw AddressException("failed to convert IP address");	
+		// TODO om det behövs
+		throw AddressException("IPv6 not supported yet");
 	}
 	return sa;
 }
