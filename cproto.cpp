@@ -423,13 +423,13 @@ regenId:
 	}, std::move(msg)));
 }
 
-MessageProcessor::MessageProcessor(bool ipv4)
+MessageProcessor::MessageProcessor(bool ipv4, short port)
 	: s(ipv4),
 	  closing(false),
 	  idCleaner(&MessageProcessor::idCleanerLoop, this),
 	  distributorJoiner(&MessageProcessor::distributorJoinerLoop, this)
 {
-	s.bind(0);
+	s.bind(port);
 	
 	Name myName = addrToName(stun(nameToAddr({"74.125.200.127", 19302})));
 	printf("IP: %s\nPort: %d\n", myName.ip.c_str(), myName.port);

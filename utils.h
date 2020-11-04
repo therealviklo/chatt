@@ -1,5 +1,6 @@
 #pragma once
 #include <stdexcept>
+#include <sstream>
 
 #define EXCEPT(name) \
 	struct name final : public std::runtime_error \
@@ -74,3 +75,19 @@ public:
 	Defer(const Defer&) = delete;
 	Defer& operator=(const Defer&) = delete;
 };
+
+template <typename T>
+std::string toString(T t)
+{
+	std::stringstream ss;
+	ss << t;
+	return ss.str();
+}
+
+template <typename T>
+std::wstring toWString(T t)
+{
+	std::wstringstream ss;
+	ss << t;
+	return ss.str();
+}

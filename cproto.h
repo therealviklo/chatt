@@ -6,6 +6,7 @@
 #include <map>
 #include <chrono>
 #include <queue>
+#include <condition_variable>
 #include "wsa.h"
 #include "stun.h"
 #include "random.h"
@@ -92,7 +93,7 @@ private:
 	void distributorJoinerLoop();
 	void receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV);
 public:
-	MessageProcessor(bool ipv4);
+	MessageProcessor(bool ipv4, short port);
 	~MessageProcessor();
 
 	MessageProcessor(const MessageProcessor&) = delete;

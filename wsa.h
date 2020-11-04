@@ -3,9 +3,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
-#include <winternl.h>
-#include <mstcpip.h>
-#include <ip2string.h>
+// #include <mstcpip.h>
+// #include <ip2string.h>
 #include <string>
 #include <sstream>
 #include "utils.h"
