@@ -15,12 +15,12 @@ if not "%2"=="" goto :flagsClang
 if "%_compiler%"=="g++" goto :flagsGCC
 if "%_compiler%"=="gcc" goto :flagsGCC
 :flagsClang
-echo Flags: Clang
-set _flags=-std=c++20
+set _flags=-std=c++20 -Wno-deprecated-anon-enum-enum-conversion
+echo Flags: Clang (%_flags%)
 goto :flagsEnd
 :flagsGCC
-echo Flags: GCC
 set _flags=-std=c++2a -mwindows -municode
+echo Flags: GCC (%_flags%)
 :flagsEnd
 
 vmake %_compiler% %_flags% -o chatt.exe -D_CRT_SECURE_NO_WARNINGS NAMN -lws2_32 -lntdll -luser32
