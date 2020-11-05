@@ -26,14 +26,21 @@ int main()
 			{
 				case 'c':
 				{
-					printf("IP: ");
-					char ip[48];
-					if (!fgets(ip, 48, stdin)) throw std::runtime_error("IP too long");
-					printf("Port: ");
-					char port[10];
-					if (!fgets(port, 10, stdin)) throw std::runtime_error("port too long");
-					unsigned short portI = std::strtoul(port, nullptr, 10);
-					mp.connect(nameToAddr({ip, portI}));
+					try
+					{
+						printf("IP: ");
+						char ip[48];
+						if (!fgets(ip, 48, stdin)) throw std::runtime_error("IP too long");
+						printf("Port: ");
+						char port[10];
+						if (!fgets(port, 10, stdin)) throw std::runtime_error("port too long");
+						unsigned short portI = std::strtoul(port, nullptr, 10);
+						mp.connect(nameToAddr({ip, portI}));
+					}
+					catch (...)
+					{
+						puts("Kunde inte ansluta");
+					}
 				}
 				break;
 				case 's':
