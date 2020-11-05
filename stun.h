@@ -4,6 +4,10 @@
 #include "wsa.h"
 #include "random.h"
 
+// Funktioner och typer för att kommunicera med STUN-servrar.
+
+/* Värden som representerar meddelandetyper. Typen har två
+   komponenter: "Class" och "Method".*/
 namespace MessageType
 {
 	namespace Class
@@ -29,6 +33,8 @@ namespace MessageType
 	}
 }
 
+/* Värden som representerar attribut-id:n. "Attribut" är olika bitar information
+   som ett meddelande kan innehålla. */
 namespace Attribute
 {
 	enum {
@@ -37,6 +43,8 @@ namespace Attribute
 	};
 }
 
+
+// Alla STUN-meddelanden har en sådan här header.
 struct StunMessageHeader
 {
 	uint16_t messageType;
@@ -45,11 +53,17 @@ struct StunMessageHeader
 	uint8_t transactionId[12];
 };
 
+// Exception för om något går fel.
 EXCEPT(StunException)
 
+// (Finns inte redan en sådan här i wsa.h?)
 std::string ipToStr(uint32_t ip);
 
+/* Slumpar fram ett transaktions-id. (Notera att den inte returnerar id:t utan att
+   den tar en pekare till början av där id:t ska läggas.) */
 void getTransactionId(uint8_t* transactionId);
+// XOR:ar två bitar data. 
 void xorData(void* dest, const void* other, size_t size);
 
+// Kontaktar en STUN-server och frågar den om vem man är.
 Addr stun(Socket& s, const Addr& stunServer);
