@@ -439,21 +439,30 @@ MessageProcessor::MessageProcessor(bool ipv4, short port)
 
 MessageProcessor::~MessageProcessor()
 {
+	// Här görs tre saker för att markera att trådarna ska stängas:
+	// Den här boolen sätts till true.
 	closing = true;
+	/* Tråden som kör destruktorn låser closeMutex. När receivertråden har tagit emot ett meddelande
+	   låser den closeMutex, men om den inte kan det så returnerar den från funktionen (= den stänger).
+	   Detta garanterar också att receivertråden inte håller på med något meddelande när den fortsätter.
+	   (Om den gör det så kommer den att vänta här.) */
 	std::lock_guard lg(closeMutex);
+	/* Socketen stängs, vilket betyder att om receivertråden försöker köra s.recv() för att vänta på nästa
+	   meddelande (eller om den redan gör det) så bara kastas en exception. Den fångar då den och kollar om
+	   closeMutex är låst och i så fall returnerar den. (Annars var det ett riktigt fel.) */
 	s.close();
 	
 	receiver.join();
 	
 	{
 		std::lock_guard lg2(distributors_m);
-		distributors_cv.notify_all();
+		distributors_cv.notify_all(); // Väcker tråden om den sover så att den kan kolla om den ska returna
 	}
 	distributorJoiner.join();
 
 	{
 		std::lock_guard lg3(msgs_m);
-		msgs_cv.notify_all();
+		msgs_cv.notify_all(); // Väcker tråden om den sover så att den kan kolla om den ska returna
 	}
 	idCleaner.join();
 }
@@ -461,12 +470,16 @@ MessageProcessor::~MessageProcessor()
 void MessageProcessor::connect(const Addr& addr)
 {
 	std::unique_lock ul(conns_m);
+	// Kollar om man redan är ansluten till addressen.
 	if (std::find(conns.begin(), conns.end(), addr) == conns.end())
 	{
 		ul.unlock();
 
+		// Skickar ett conn-meddelande. (Denna funktion kastar en exception om den inte får något svar.)
 		send(addr, MsgType::conn, nullptr, 0);
 
+		/* Kontrollerar att man fortfarande inte har registrerat anslutningen. (Detta kan hända om den andra
+		   också försöker ansluta samtidigt.) */
 		ul.lock();
 		if (std::find(conns.begin(), conns.end(), addr) == conns.end())
 			conns.push_back(addr);
