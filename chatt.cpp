@@ -6,7 +6,7 @@
 #include "stun.h"
 #include "cproto.h"
 #include "gui.h"
-
+//testkommentar
 // Huvudfilen
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
