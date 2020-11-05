@@ -19,8 +19,9 @@ int main()
 		MessageProcessor mp(true, 0);
 		while (true)
 		{
-			printf(">");
+			printf("> ");
 			char c = getchar();
+			getchar();
 			switch (c)
 			{
 				case 'c':
