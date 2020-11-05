@@ -168,15 +168,10 @@ void MessageProcessor::distributorJoinerLoop()
 	}
 }
 
-void MessageProcessor::receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV)
+void MessageProcessor::receiverLoop()
 {
 	try
 	{
-		std::unique_lock<std::mutex> receiverUL(recvM);
-		{
-			std::unique_lock<std::mutex> receiverReadyUL(*receiverReadyM);
-			receiverReadyCV->notify_all();
-		}
 		while (true)
 		{
 			Addr sender;
@@ -426,20 +421,20 @@ regenId:
 MessageProcessor::MessageProcessor(bool ipv4, short port)
 	: s(ipv4),
 	  closing(false),
-	  idCleaner(&MessageProcessor::idCleanerLoop, this),
-	  distributorJoiner(&MessageProcessor::distributorJoinerLoop, this)
+	  idCleaner(&MessageProcessor::idCleanerLoop, this), // Startar idCleaner
+	  distributorJoiner(&MessageProcessor::distributorJoinerLoop, this) // Startar distributorJoiner
 {
+	// Det första som händer när man skapar en MessageProcessor är att den binder socketen.
 	s.bind(port);
 	
+	// Sedan kontaktas en STUN-server. (För närvarande är den bara hårdkodad.)
 	Name myName = addrToName(stun(nameToAddr({"74.125.200.127", 19302})));
-	printf("IP: %s\nPort: %d\n", myName.ip.c_str(), myName.port);
 
-	std::mutex receiverReadyM;
-	std::condition_variable receiverReadyCV;
-	std::unique_lock<std::mutex> receiverReadyUL(receiverReadyM);
-	std::thread t(&MessageProcessor::receiverLoop, this, &receiverReadyM, &receiverReadyCV);
+	/* Receivertråden ska startas efter att STUN-servern har kontaktats, så den startas
+	   här i en lokal variabel och sedan byter den plats till den riktiga receivertrådvariabeln
+	   i klassen. */
+	std::thread t(&MessageProcessor::receiverLoop, this);
 	t.swap(receiver);
-	receiverReadyCV.wait(receiverReadyUL);
 }
 
 MessageProcessor::~MessageProcessor()

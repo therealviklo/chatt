@@ -106,10 +106,6 @@ private:
 	std::unordered_map<uint64_t, time_t> recentMsgs;
 	std::unordered_map<DistrId, time_t> recentDistrMsgs;
 
-	// De här verkar inte egentligen användas till något längre, ska nog ta bort.
-	std::mutex recvM;
-	std::condition_variable recvCV;
-
 	// En lista med alla andra noder som man vet är online.
 	std::mutex conns_m;
 	std::vector<Addr> conns;
@@ -138,7 +134,7 @@ private:
 
 	void idCleanerLoop();
 	void distributorJoinerLoop();
-	void receiverLoop(std::mutex* receiverReadyM, std::condition_variable* receiverReadyCV);
+	void receiverLoop();
 public:
 	MessageProcessor(bool ipv4, short port);
 	~MessageProcessor();
