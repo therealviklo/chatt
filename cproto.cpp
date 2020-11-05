@@ -429,6 +429,7 @@ MessageProcessor::MessageProcessor(bool ipv4, short port)
 	
 	// Sedan kontaktas en STUN-server. (För närvarande är den bara hårdkodad.)
 	Name myName = addrToName(stun(nameToAddr({"74.125.200.127", 19302})));
+	printf("IP: %s\nPort: %hu\n", myName.ip.c_str(), myName.port);
 
 	/* Receivertråden ska startas efter att STUN-servern har kontaktats, så den startas
 	   här i en lokal variabel och sedan byter den plats till den riktiga receivertrådvariabeln

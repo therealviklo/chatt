@@ -1,6 +1,6 @@
 #include "window.h"
 
-WindowClass defWindowClass(L"defWindowClass");
+// WindowClass defWindowClass(L"defWindowClass");
 
 WindowClass::WindowClass(std::wstring className)
 	: className(std::move(className)),

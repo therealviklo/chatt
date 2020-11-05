@@ -9,14 +9,43 @@
 
 // Huvudfilen
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+int main()
 {
 	try // Fånga alla körtidsfel så att man kan visa en ruta med felet
 	{
 		wsaHandler.initialise();
 
-		MainWindow mw;
-		while (mw) mw.update();
+		puts("c = connect, s = send, q = quit");
+		MessageProcessor mp(false, 0);
+		while (true)
+		{
+			printf(">");
+			char c = getchar();
+			switch (c)
+			{
+				case 'c':
+				{
+					printf("IP: ");
+					char ip[48];
+					if (!fgets(ip, 48, stdin)) throw std::runtime_error("IP too long");
+					printf("Port: ");
+					char port[10];
+					if (!fgets(port, 10, stdin)) throw std::runtime_error("port too long");
+					unsigned short portI = std::strtoul(port, nullptr, 10);
+					mp.connect(nameToAddr({ip, portI}));
+				}
+				break;
+				case 's':
+				{
+					printf("Message: ");
+					char msg[256];
+					if (!fgets(msg, 256, stdin)) throw std::runtime_error("message too long");
+					mp.sendMessage(msg);
+				}
+				break;
+				case 'q': return EXIT_SUCCESS;
+			}
+		}
 	}
 	catch (const WSAException& e) // WSAException har en felkod som man kan skriva ut
 	{
@@ -24,22 +53,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		ss << e.what();
 		ss << "\r\nError code: ";
 		ss << e.errCode;
-		MessageBoxA(
-			nullptr,
-			ss.str().c_str(),
-			"Error",
-			MB_ICONERROR | MB_TASKMODAL
-		);
+		fputs(("Error: " + ss.str()).c_str(), stderr);
 		return EXIT_FAILURE;
 	}
 	catch (const std::exception& e) // Andra fel som ärver från std::exception
 	{
-		MessageBoxA(nullptr, e.what(), "Error", MB_ICONERROR | MB_TASKMODAL);
+		fputs(("Error: " + (std::string)e.what()).c_str(), stderr);
 		return EXIT_FAILURE;
 	}
 	catch (...) // För fel som inte ärver från std::exception (som de borde göra)
 	{
-		MessageBoxW(nullptr, L"Unknown error", L"Error", MB_ICONERROR | MB_TASKMODAL);
+		fputs("Error: unknown error", stderr);
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

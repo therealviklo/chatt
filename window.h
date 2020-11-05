@@ -51,4 +51,4 @@ public:
 	constexpr operator bool() const noexcept { return hWnd; }
 };
 
-extern WindowClass defWindowClass;
+// extern WindowClass defWindowClass;
