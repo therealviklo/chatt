@@ -16,7 +16,7 @@ int main()
 		wsaHandler.initialise();
 
 		puts("c = connect, s = send, q = quit");
-		MessageProcessor mp(false, 0);
+		MessageProcessor mp(true, 0);
 		while (true)
 		{
 			printf(">");
