@@ -7,30 +7,30 @@ Name addrToName(const Addr& addr)
 	std::stringstream ss;
 	if (addr.family == AF_INET)
 	{
-		ss << addr.ipv4.sin_addr.S_un.S_un_b.s_b1 << '.'
-		   << addr.ipv4.sin_addr.S_un.S_un_b.s_b2 << '.'
-		   << addr.ipv4.sin_addr.S_un.S_un_b.s_b3 << '.'
-		   << addr.ipv4.sin_addr.S_un.S_un_b.s_b4;
+		ss << (uint16_t)addr.ipv4.sin_addr.S_un.S_un_b.s_b1 << '.'
+		   << (uint16_t)addr.ipv4.sin_addr.S_un.S_un_b.s_b2 << '.'
+		   << (uint16_t)addr.ipv4.sin_addr.S_un.S_un_b.s_b3 << '.'
+		   << (uint16_t)addr.ipv4.sin_addr.S_un.S_un_b.s_b4;
 		return {ss.str(), ntohs(addr.ipv4.sin_port)};
 	}
 	else if (addr.family == AF_INET6)
 	{
-		ss << addr.ipv6.sin6_addr.u.Byte[0] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[1] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[2] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[3] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[4] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[5] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[6] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[7] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[8] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[9] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[10] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[11] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[12] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[13] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[14] << ":"
-		   << addr.ipv6.sin6_addr.u.Byte[15] << ":";
+		ss << (uint16_t)addr.ipv6.sin6_addr.u.Byte[0] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[1] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[2] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[3] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[4] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[5] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[6] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[7] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[8] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[9] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[10] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[11] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[12] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[13] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[14] << ":"
+		   << (uint16_t)addr.ipv6.sin6_addr.u.Byte[15] << ":";
 		return {ss.str(), ntohs(addr.ipv6.sin6_port)};
 	}
 	else
