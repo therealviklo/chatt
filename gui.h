@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include "window.h"
 #include "cproto.h"
 
@@ -7,7 +8,7 @@
 class MainWindow : public Window
 {
 private:
-	MessageProcessor mp;
+	std::optional<MessageProcessor> mp;
 public:
 	MainWindow();
 

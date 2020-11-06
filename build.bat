@@ -23,4 +23,4 @@ set _flags=-std=c++2a -mwindows -municode
 echo Flags: GCC (%_flags%)
 :flagsEnd
 
-vmake %_compiler% %_flags% -o chatt.exe -D_CRT_SECURE_NO_WARNINGS NAMN -lws2_32 -lntdll -luser32
+vmake %_compiler% %_flags% -o chatt.exe -D_CRT_SECURE_NO_WARNINGS NAMN -lws2_32 -lntdll -luser32 -lcomctl32

@@ -1,5 +1,6 @@
 #pragma once
 #include "win.h"
+#include <commctrl.h>
 #include "utils.h"
 
 // Klasser för att göra fönster.
@@ -17,7 +18,7 @@ private:
 	std::wstring className;
 	bool registered;
 public:
-	WindowClass(std::wstring className);
+	WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSOR cursor);
 	~WindowClass();
 
 	WindowClass(const WindowClass&) = delete;
@@ -49,6 +50,29 @@ public:
 
 	constexpr operator HWND() noexcept { return hWnd; }
 	constexpr operator bool() const noexcept { return hWnd; }
+};
+
+class Control
+{
+public:
+	EXCEPT(Exception);
+private:
+	UHandle<HWND, DestroyWindow> hWnd;
+
+	static LRESULT subclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR idSubclass, DWORD_PTR refData);
+public:
+	Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent);
+	virtual ~Control() = default;
+
+	constexpr operator HWND() noexcept { return hWnd; }
+	constexpr operator bool() const noexcept { return hWnd; }
+};
+
+class EditControl : public Control
+{
+public:
+	EditControl(DWORD style, DWORD exStyle, HWND parent)
+		: Control(L"Edit", style, exStyle, nullptr, parent) {}
 };
 
 extern WindowClass defWindowClass;

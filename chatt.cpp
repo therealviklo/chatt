@@ -16,6 +16,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		wsaHandler.initialise();
 
 		MainWindow mw;
+		EditControl ec(0, 0, mw);
+
+		SetWindowPos(ec, 0, 0, 0, 50, 50, SWP_NOACTIVATE | SWP_NOZORDER);
+
 		while (mw) mw.update();
 	}
 	catch (const WSAException& e) // WSAException har en felkod som man kan skriva ut

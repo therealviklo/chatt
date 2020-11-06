@@ -75,6 +75,13 @@ public:
 	UHandle(const UHandle&) = delete;
 	UHandle& operator=(const UHandle&) = delete;
 
+	/* Sätter handle till det ogiltiga handlet utan att stänga handlet. (Använd
+	   om du vet att handlet redan är stängt.) */
+	void resetNoClose() noexcept
+	{
+		handle = InvalidHandle;
+	}
+
 	/* Det här gör så att man kan implicit konvertera klassen till själva handletypen.
 	   (Alltså om en funktion vill ett HWND så kan man bara stoppa in en instans av
 	   UHandle<HWND, ...> och så funkar det.) */
