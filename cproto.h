@@ -124,7 +124,7 @@ private:
 
 	// Trådarna
 	std::thread idCleaner; // Tar bort gamla id:n från recentMsgs och recentDistrMsgs.
-	std::thread distributorJoiner; // Joinar trådari distributors.
+	std::thread distributorJoiner; // Joinar trådar i distributors.
 	std::thread receiver; // Tar emot meddelanden.
 	
 	inline Addr stun(const Addr& stunServer) { return ::stun(s, stunServer); }
