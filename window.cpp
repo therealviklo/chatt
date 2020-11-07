@@ -81,6 +81,28 @@ Window::Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t*
 	ShowWindow(hWnd, SW_SHOW);
 }
 
+Window::Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t* name, Menu&& menu, HWND parent)
+{
+	if (!wc.registered) throw Exception("failed to register window class");
+	hWnd = CreateWindowExW(
+		exStyle,
+		wc.className.c_str(),
+		name,
+		style,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		parent,
+		menu.menu,
+		GetModuleHandleW(nullptr),
+		this
+	);
+	if (!hWnd) throw Exception("failed to create window");
+	menu.menu.resetNoClose();
+	ShowWindow(hWnd, SW_SHOW);
+}
+
 void Window::update()
 {
 	MSG msg;
@@ -119,4 +141,33 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 
 	if (!SetWindowSubclass(hWnd, subclassProc, 1, (DWORD_PTR)this))
 		throw Exception("failed to set control subclass");
+}
+
+Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)
+	: menu(CreateMenu())
+{
+	if (!menu) throw Exception("failed to create menu");
+
+	for (auto& e : elements)
+	{
+		if (std::holds_alternative<MenuItem>(e))
+		{
+			if (!AppendMenuW(
+				menu,
+				MF_STRING,
+				std::get<MenuItem>(e).second,
+				std::get<MenuItem>(e).first.c_str()
+			)) throw Exception("failed to add menu item");
+		}
+		else if (std::holds_alternative<SubMenu>(e))
+		{
+			if (!AppendMenuW(
+				menu,
+				MF_POPUP,
+				(UINT_PTR)(HMENU)const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu,
+				std::get<SubMenu>(e).first.c_str()
+			)) throw Exception("failed to add menu item");
+			const_cast<Menu*>(&std::get<SubMenu>(e).second)->menu.resetNoClose();
+		}
+	}
 }

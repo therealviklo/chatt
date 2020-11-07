@@ -4,8 +4,9 @@ MainWindow::MainWindow()
 	: Window(
 		defWindowClass,
 		WS_OVERLAPPEDWINDOW,
-		WS_EX_OVERLAPPEDWINDOW,
-		L"Chatt"
+		0,
+		L"Chatt",
+		Menu{SubMenu(L"Test2", Menu{MenuItem(L"Hej", 101)})}
 	  ) {}
 
 LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam) 
