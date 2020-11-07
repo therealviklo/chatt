@@ -162,7 +162,7 @@ std::string Socket::recv(int max, Addr* addr)
 	}
 	if (received == 0) return "";
 	buf.resize(received);
-	return std::move(buf);
+	return buf;
 }
 
 void Socket::recv(void* buffer, int size, Addr* addr)
