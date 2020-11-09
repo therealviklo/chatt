@@ -1,5 +1,36 @@
 #include "gui.h"
 
+void MainWindow::onResize(WORD width, WORD height)
+{
+	SetWindowPos(
+		chatBox,
+		nullptr,
+		5,
+		5,
+		width - 5 - 5,
+		height - 5 - 20 - 5 - 5,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+	SetWindowPos(
+		msgBox,
+		nullptr,
+		5,
+		height - 5 - 20,
+		width - 5 - 5 - 50 - 5,
+		20,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+	SetWindowPos(
+		sendButton,
+		nullptr,
+		width - 5 - 50,
+		height - 5 - 20,
+		50,
+		20,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+}
+
 MainWindow::MainWindow()
 	: Window(
 		defWindowClass,
@@ -10,9 +41,13 @@ MainWindow::MainWindow()
 			 MenuItem(L"Stäng", MenuId::close),
 			 MenuItem(L"Anslut", MenuId::connect)}
 	  ),
-	  button(L"Yest", 0, 0, *this)
+	  chatBox(ES_MULTILINE | ES_READONLY | WS_VSCROLL, 0, *this),
+	  msgBox(0, 0, *this),
+	  sendButton(L"Skicka", 0, 0, *this)
 {
-	SetWindowPos(button, 0, 0, 0, 50, 50, SWP_NOACTIVATE | SWP_NOZORDER);
+	RECT windRect;
+	if (!GetClientRect(*this, &windRect)) throw Exception("Kunde inte hämta fönsterstorlek");
+	onResize(windRect.right - windRect.left, windRect.bottom - windRect.top);
 }
 
 LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam) 
@@ -25,12 +60,17 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			{
 				case BN_CLICKED:
 				{
-					if ((HWND)lParam == (HWND)button)
+					if ((HWND)lParam == (HWND)sendButton)
 					{
 						MessageBoxW(*this, L"HEJA", L"HE", 0);
 					}
 				}
 			}
+		}
+		return 0;
+		case WM_SIZE:
+		{
+			onResize(LOWORD(lParam), HIWORD(lParam));
 		}
 		return 0;
 	}

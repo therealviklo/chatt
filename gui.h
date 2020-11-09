@@ -3,6 +3,8 @@
 #include "window.h"
 #include "cproto.h"
 
+// GUI. (Inte riktigt klart än.)
+
 namespace MenuId
 {
 	enum 
@@ -13,14 +15,16 @@ namespace MenuId
 	};
 }
 
-// GUI. (Inte riktigt klart än.)
-
 class MainWindow : public Window
 {
 private:
-	Button button;
+	EditControl chatBox;
+	EditControl msgBox;
+	Button sendButton;
 
 	std::optional<MessageProcessor> mp;
+
+	void onResize(WORD width, WORD height);
 public:
 	MainWindow();
 
