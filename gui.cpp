@@ -6,7 +6,9 @@ MainWindow::MainWindow()
 		WS_OVERLAPPEDWINDOW,
 		0,
 		L"Chatt",
-		Menu{SubMenu(L"Test2", Menu{MenuItem(L"Hej", 101)})}
+		Menu{MenuItem(L"Öppna", MenuId::open), 
+			 MenuItem(L"Stäng", MenuId::close),
+			 MenuItem(L"Anslut", MenuId::connect)}
 	  ) {}
 
 LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam) 
