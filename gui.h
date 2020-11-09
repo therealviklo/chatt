@@ -18,6 +18,8 @@ namespace MenuId
 class MainWindow : public Window
 {
 private:
+	Button button;
+
 	std::optional<MessageProcessor> mp;
 public:
 	MainWindow();

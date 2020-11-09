@@ -64,6 +64,8 @@ private:
 	UHandle<HWND, DestroyWindow> hWnd;
 
 	static LRESULT subclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR idSubclass, DWORD_PTR refData);
+protected:
+	virtual LRESULT proc(UINT msg, WPARAM wParam, LPARAM lParam) { return DefSubclassProc(*this, msg, wParam, lParam); }
 public:
 	Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent);
 	virtual ~Control() = default;
@@ -77,6 +79,13 @@ class EditControl : public Control
 public:
 	EditControl(DWORD style, DWORD exStyle, HWND parent)
 		: Control(L"Edit", style, exStyle, nullptr, parent) {}
+};
+
+class Button : public Control
+{
+public:
+	Button(const wchar_t* text, DWORD style, DWORD exStyle, HWND parent)
+		: Control(L"Button", style, exStyle, text, parent) {}
 };
 
 typedef std::pair<std::wstring, Menu> SubMenu;

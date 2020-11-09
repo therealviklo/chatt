@@ -118,7 +118,7 @@ LRESULT Control::subclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam,
 		reinterpret_cast<Control*>(refData)->hWnd.resetNoClose();
 		return TRUE;
 	}
-	return DefSubclassProc(hWnd, msg, wParam, lParam);
+	return reinterpret_cast<Control*>(refData)->proc(msg, wParam, lParam);
 }
 
 Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent)
