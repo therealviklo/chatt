@@ -6,6 +6,8 @@
 
 // Klasser för att göra fönster.
 
+void updateAllWindows();
+
 // Forwarddeklaration
 class Window;
 
@@ -41,8 +43,25 @@ private:
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 public:
 	Window() noexcept = default;
-	Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent = nullptr);
-	Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t* name, Menu&& menu, HWND parent = nullptr);
+	Window(
+		const WindowClass& wc,
+		DWORD style,
+		DWORD exStyle,
+		const wchar_t* name,
+		HWND parent = nullptr,
+		int width = CW_USEDEFAULT,
+		int height = CW_USEDEFAULT
+	);
+	Window(
+		const WindowClass& wc,
+		DWORD style,
+		DWORD exStyle,
+		const wchar_t* name,
+		Menu&& menu,
+		HWND parent = nullptr,
+		int width = CW_USEDEFAULT,
+		int height = CW_USEDEFAULT
+	);
 	virtual ~Window() = default;
 
 	/* En virtuell funktion som får parametrarna från den "riktiga" WndProc:en. Det är meningen att underklasserna
@@ -86,6 +105,33 @@ class Button : public Control
 public:
 	Button(const wchar_t* text, DWORD style, DWORD exStyle, HWND parent)
 		: Control(L"Button", style, exStyle, text, parent) {}
+};
+
+class IpAddress : public Control
+{
+public:
+	IpAddress(DWORD style, DWORD exStyle, HWND parent)
+		: Control(L"SysIPAddress32", style, exStyle, nullptr, parent) {}
+
+	uint32_t getAddress();
+};
+
+class UpDown : public Control
+{
+public:
+	UpDown(DWORD style, DWORD exStyle, HWND parent)
+		: Control(L"msctls_updown32", style, exStyle, nullptr, parent) {}
+	UpDown(DWORD style, DWORD exStyle, HWND buddy, HWND parent);
+
+	void setRange(int min, int max);
+	int getValue();
+};
+
+class Label : public Control
+{
+public:
+	Label(const wchar_t* text, DWORD style, DWORD exStyle, HWND parent)
+		: Control(L"Static", style ^ WS_BORDER, exStyle, text, parent) {}
 };
 
 typedef std::pair<std::wstring, Menu> SubMenu;

@@ -1,5 +1,126 @@
 #include "gui.h"
 
+void MainWindow::ConnectWindow::onResize(WORD width, WORD height)
+{
+	const int ipLabelX = 5;
+	const int ipLabelY = 5;
+	const int ipLabelW = 150;
+	const int ipLabelH = 20;
+	const int ipX = 5;
+	const int ipY = ipLabelY + ipLabelH + 5;
+	const int ipW = 100;
+	const int ipH = 200;
+	const int portLabelX = ipX + ipW + 5;
+	const int portLabelY = 5;
+	const int portLabelW = 100;
+	const int portLabelH = 20;
+	const int portBuddyX = ipX + ipW + 5;
+	const int portBuddyY = portLabelY + portLabelH + 5;
+	const int portBuddyW = 100;
+	const int portBuddyH = 20;
+	const int portX = portBuddyX + portBuddyW;
+	const int portY = portBuddyY;
+	const int portW = 20;
+	const int portH = 20;
+	const int connButtonW = 100;
+	const int connButtonH = 20;
+	const int connButtonX = width - 5 - connButtonW;
+	const int connButtonY = height - 5 - connButtonH;
+
+	SetWindowPos(
+		ipLabel,
+		nullptr,
+		ipLabelX,
+		ipLabelY,
+		ipLabelW,
+		ipLabelH,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+	SetWindowPos(
+		ip,
+		nullptr,
+		ipX,
+		ipY,
+		ipW,
+		ipH,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+	SetWindowPos(
+		portLabel,
+		nullptr,
+		portLabelX,
+		portLabelY,
+		portLabelW,
+		portLabelH,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+	SetWindowPos(
+		portBuddy,
+		nullptr,
+		portBuddyX,
+		portBuddyY,
+		portBuddyW,
+		portBuddyH,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+	SetWindowPos(
+		port,
+		nullptr,
+		portX,
+		portY,
+		portW,
+		portH,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+	SetWindowPos(
+		connButton,
+		nullptr,
+		connButtonX,
+		connButtonY,
+		connButtonW,
+		connButtonH,
+		SWP_NOACTIVATE | SWP_NOZORDER
+	);
+}
+
+MainWindow::ConnectWindow::ConnectWindow(HWND parent)
+	: Window(
+		defWindowClass,
+		WS_OVERLAPPEDWINDOW,
+		0,
+		L"Anslut",
+		nullptr,
+		500,
+		500
+	  ),
+	  mw(*static_cast<MainWindow*>(reinterpret_cast<Window*>(GetWindowLongPtrW(parent, GWLP_USERDATA)))),
+	  ipLabel(L"IP", 0, 0, *this),
+	  ip(0, 0, *this),
+	  portLabel(L"Port", 0, 0, *this),
+	  portBuddy(ES_NUMBER, 0, *this),
+	  port(UDS_HOTTRACK | UDS_SETBUDDYINT | UDS_NOTHOUSANDS | WS_BORDER, WS_EX_LEFT, portBuddy, *this),
+	  connButton(L"Anslut", 0, 0, *this)
+{
+	port.setRange(1, 0xffff);
+
+	RECT windRect;
+	if (!GetClientRect(*this, &windRect)) throw Exception("Kunde inte hämta fönsterstorlek");
+	onResize(windRect.right - windRect.left, windRect.bottom - windRect.top);
+}
+
+LRESULT MainWindow::ConnectWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+		case WM_SIZE:
+		{
+			onResize(LOWORD(lParam), HIWORD(lParam));
+		}
+		return 0;
+	}
+	return DefWindowProcW(*this, msg, wParam, lParam);
+}
+
 void MainWindow::onResize(WORD width, WORD height)
 {
 	SetWindowPos(
@@ -50,7 +171,7 @@ MainWindow::MainWindow()
 	onResize(windRect.right - windRect.left, windRect.bottom - windRect.top);
 }
 
-LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam) 
+LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
 	{
@@ -66,6 +187,32 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 					}
 				}
 			}
+		}
+		return 0;
+		case WM_MENUSELECT:
+		{
+			if (!(HIWORD(wParam) & MF_POPUP))
+			{
+				switch (LOWORD(wParam))
+				{
+					case MenuId::open:
+					{
+						mp.emplace(true, 0);
+					}
+					break;
+					case MenuId::close:
+					{
+						mp.reset();
+					}
+					break;
+					case MenuId::connect:
+					{
+						connectWindow.emplace(*this);
+					}
+					break;
+				}
+			}
+			else return DefWindowProcW(*this, msg, wParam, lParam);
 		}
 		return 0;
 		case WM_SIZE:

@@ -2,6 +2,14 @@
 
 WindowClass defWindowClass(L"defWindowClass", (HBRUSH)COLOR_BACKGROUND, LoadCursorW(nullptr, IDC_ARROW));
 
+void updateAllWindows()
+{
+	MSG msg;
+	if (GetMessageW(&msg, nullptr, 0, 0) == -1) throw Window::Exception("failed to get message");
+	TranslateMessage(&msg);
+	DispatchMessageW(&msg);
+}
+
 WindowClass::WindowClass(std::wstring className, HBRUSH backgroundColour, HCURSOR cursor)
 	: className(std::move(className)),
 	  registered(false)
@@ -60,7 +68,15 @@ LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
 	return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
-Window::Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent)
+Window::Window(
+	const WindowClass& wc,
+	DWORD style,
+	DWORD exStyle,
+	const wchar_t* name,
+	HWND parent,
+	int width,
+	int height
+)
 {
 	if (!wc.registered) throw Exception("failed to register window class");
 	hWnd = CreateWindowExW(
@@ -70,8 +86,8 @@ Window::Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t*
 		style,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
+		width,
+		height,
 		parent,
 		nullptr,
 		GetModuleHandleW(nullptr),
@@ -81,7 +97,16 @@ Window::Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t*
 	ShowWindow(hWnd, SW_SHOW);
 }
 
-Window::Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t* name, Menu&& menu, HWND parent)
+Window::Window(
+	const WindowClass& wc,
+	DWORD style,
+	DWORD exStyle,
+	const wchar_t* name,
+	Menu&& menu,
+	HWND parent,
+	int width,
+	int height
+)
 {
 	if (!wc.registered) throw Exception("failed to register window class");
 	hWnd = CreateWindowExW(
@@ -91,8 +116,8 @@ Window::Window(const WindowClass& wc, DWORD style, DWORD exStyle, const wchar_t*
 		style,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
+		width,
+		height,
 		parent,
 		menu.menu,
 		GetModuleHandleW(nullptr),
@@ -127,7 +152,7 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 		exStyle,
 		wc,
 		name,
-		style | WS_VISIBLE | WS_BORDER | WS_CHILD,
+		style ^ WS_VISIBLE ^ WS_BORDER ^ WS_CHILD,
 		0,
 		0,
 		0,
@@ -141,6 +166,32 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 
 	if (!SetWindowSubclass(hWnd, subclassProc, 1, (DWORD_PTR)this))
 		throw Exception("failed to set control subclass");
+}
+
+uint32_t IpAddress::getAddress()
+{
+	uint32_t addr = 0;
+	SendMessageW(*this, IPM_GETADDRESS, 0, reinterpret_cast<LPARAM>(&addr));
+	return addr;
+}
+
+void UpDown::setRange(int min, int max)
+{
+	SendMessageW(*this, UDM_SETRANGE32, min, max);
+}
+
+UpDown::UpDown(DWORD style, DWORD exStyle, HWND buddy, HWND parent)
+	: UpDown(style, exStyle, parent)
+{
+	SendMessageW(*this, UDM_SETBUDDY, reinterpret_cast<WPARAM>(buddy), 0);
+}
+
+int UpDown::getValue()
+{
+	BOOL success = false;
+	int ret = SendMessageW(*this, UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(&success));
+	if (!success) throw Exception("Kunde inte hämta värde från nummerinmatare");
+	return ret;
 }
 
 Menu::Menu(std::initializer_list<std::variant<MenuItem, SubMenu>> elements)

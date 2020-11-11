@@ -23,6 +23,26 @@ private:
 	Button sendButton;
 
 	std::optional<MessageProcessor> mp;
+	
+	class ConnectWindow : public Window
+	{
+	private:
+		MainWindow& mw;
+
+		Label ipLabel;
+		IpAddress ip;
+		Label portLabel;
+		EditControl portBuddy;
+		UpDown port;
+		Button connButton;
+
+		void onResize(WORD width, WORD height);
+	public:
+		ConnectWindow(HWND parent);
+		
+		LRESULT wndProc(UINT msg, WPARAM wParam, LPARAM lParam) override;
+	};
+	std::optional<ConnectWindow> connectWindow;
 
 	void onResize(WORD width, WORD height);
 public:

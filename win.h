@@ -8,6 +8,7 @@
 #ifndef UNICODE
 #define UNICODE
 #endif
+#define _WIN32_IE 0x0900
 #include <windows.h>
 
 /* Vissa makron bör definieras innan vi inkluderar windows.h så

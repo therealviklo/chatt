@@ -14,13 +14,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	try // Fånga alla körtidsfel så att man kan visa en ruta med felet
 	{
 		wsaHandler.initialise();
+		INITCOMMONCONTROLSEX icc{};
+		icc.dwSize = sizeof(icc);
+		icc.dwICC = ICC_INTERNET_CLASSES | ICC_UPDOWN_CLASS | ICC_STANDARD_CLASSES | ICC_WIN95_CLASSES;
+		InitCommonControlsEx(&icc);
 
 		MainWindow mw;
 		// EditControl ec(0, 0, mw);
 
 		// SetWindowPos(ec, 0, 0, 0, 50, 50, SWP_NOACTIVATE | SWP_NOZORDER);
 
-		while (mw) mw.update();
+		while (mw) updateAllWindows();
 	}
 	catch (const WSAException& e) // WSAException har en felkod som man kan skriva ut
 	{
