@@ -152,7 +152,7 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 		exStyle,
 		wc,
 		name,
-		style ^ WS_VISIBLE ^ WS_BORDER ^ WS_CHILD,
+		style ^ WS_VISIBLE ^ WS_CHILD,
 		0,
 		0,
 		0,
@@ -166,6 +166,18 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 
 	if (!SetWindowSubclass(hWnd, subclassProc, 1, (DWORD_PTR)this))
 		throw Exception("failed to set control subclass");
+}
+
+std::wstring Control::getText()
+{
+	std::wstring s;
+	const size_t size = SendMessageW(*this, WM_GETTEXTLENGTH, 0, 0);
+	if (size)
+	{
+		s.resize(size);
+		SendMessageW(*this, WM_GETTEXT, s.size(), reinterpret_cast<LPARAM>(&s[0]));
+	}
+	return s;
 }
 
 uint32_t IpAddress::getAddress()

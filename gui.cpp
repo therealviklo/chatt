@@ -8,20 +8,20 @@ void MainWindow::ConnectWindow::onResize(WORD width, WORD height)
 	const int ipLabelH = 20;
 	const int ipX = 5;
 	const int ipY = ipLabelY + ipLabelH + 5;
-	const int ipW = 100;
-	const int ipH = 200;
+	const int ipW = 150;
+	const int ipH = 20;
 	const int portLabelX = ipX + ipW + 5;
 	const int portLabelY = 5;
 	const int portLabelW = 100;
 	const int portLabelH = 20;
 	const int portBuddyX = ipX + ipW + 5;
 	const int portBuddyY = portLabelY + portLabelH + 5;
-	const int portBuddyW = 100;
+	const int portBuddyW = 50;
 	const int portBuddyH = 20;
 	const int portX = portBuddyX + portBuddyW;
-	const int portY = portBuddyY;
+	const int portY = portBuddyY - 1;
 	const int portW = 20;
-	const int portH = 20;
+	const int portH = 20 + 2;
 	const int connButtonW = 100;
 	const int connButtonH = 20;
 	const int connButtonX = width - 5 - connButtonW;
@@ -86,22 +86,24 @@ void MainWindow::ConnectWindow::onResize(WORD width, WORD height)
 MainWindow::ConnectWindow::ConnectWindow(HWND parent)
 	: Window(
 		defWindowClass,
-		WS_OVERLAPPEDWINDOW,
-		0,
+		WS_OVERLAPPEDWINDOW ^ WS_MINIMIZEBOX ^ WS_MAXIMIZEBOX ^ WS_THICKFRAME,
+		WS_EX_TOPMOST,
 		L"Anslut",
 		nullptr,
-		500,
-		500
+		250,
+		150
 	  ),
 	  mw(*static_cast<MainWindow*>(reinterpret_cast<Window*>(GetWindowLongPtrW(parent, GWLP_USERDATA)))),
 	  ipLabel(L"IP", 0, 0, *this),
-	  ip(0, 0, *this),
+	  ip(0, WS_EX_CLIENTEDGE, *this),
 	  portLabel(L"Port", 0, 0, *this),
-	  portBuddy(ES_NUMBER, 0, *this),
-	  port(UDS_HOTTRACK | UDS_SETBUDDYINT | UDS_NOTHOUSANDS | WS_BORDER, WS_EX_LEFT, portBuddy, *this),
+	  portBuddy(ES_NUMBER, WS_EX_CLIENTEDGE, *this),
+	  port(UDS_HOTTRACK | UDS_SETBUDDYINT | UDS_NOTHOUSANDS, WS_EX_LEFT, portBuddy, *this),
 	  connButton(L"Anslut", 0, 0, *this)
 {
 	port.setRange(1, 0xffff);
+	SendMessageW(portBuddy, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(L"1"));
+	SendMessageW(ip, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(L"127.0.0.1"));
 
 	RECT windRect;
 	if (!GetClientRect(*this, &windRect)) throw Exception("Kunde inte hämta fönsterstorlek");
@@ -112,6 +114,44 @@ LRESULT MainWindow::ConnectWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lPara
 {
 	switch (msg)
 	{
+		case WM_COMMAND:
+		{
+			switch (HIWORD(wParam))
+			{
+				case BN_CLICKED:
+				{
+					if ((HWND)lParam == (HWND)connButton)
+					{
+						if (mw.mp)
+						{
+							Addr addr{};
+							try
+							{
+								addr = nameToAddr({wstringToString(ip.getText()), (unsigned short)port.getValue()});
+							}
+							catch (...)
+							{
+								MessageBoxW(*this, L"Ogiltig address", L"Kan inte ansluta", MB_ICONINFORMATION);
+								break;
+							}
+							try
+							{
+								mw.mp->connect(addr);
+							}
+							catch (...)
+							{
+								MessageBoxW(*this, L"Kunde inte ansluta", L"Kan inte ansluta", MB_ICONWARNING);
+							}
+						}
+						else
+						{
+							MessageBoxW(*this, L"Du måste öppna först!", L"Kan inte ansluta", MB_ICONINFORMATION);
+						}
+					}
+				}
+			}
+		}
+		return 0;
 		case WM_SIZE:
 		{
 			onResize(LOWORD(lParam), HIWORD(lParam));
@@ -162,8 +202,8 @@ MainWindow::MainWindow()
 			 MenuItem(L"Stäng", MenuId::close),
 			 MenuItem(L"Anslut", MenuId::connect)}
 	  ),
-	  chatBox(ES_MULTILINE | ES_READONLY | WS_VSCROLL, 0, *this),
-	  msgBox(0, 0, *this),
+	  chatBox(ES_MULTILINE | ES_READONLY | WS_VSCROLL, WS_EX_CLIENTEDGE, *this),
+	  msgBox(0, WS_EX_CLIENTEDGE, *this),
 	  sendButton(L"Skicka", 0, 0, *this)
 {
 	RECT windRect;

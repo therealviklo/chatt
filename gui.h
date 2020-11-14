@@ -30,7 +30,7 @@ private:
 		MainWindow& mw;
 
 		Label ipLabel;
-		IpAddress ip;
+		EditControl ip;
 		Label portLabel;
 		EditControl portBuddy;
 		UpDown port;

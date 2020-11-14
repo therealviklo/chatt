@@ -141,3 +141,51 @@ std::wstring toWString(T t)
 	ss << t;
 	return ss.str();
 }
+
+inline std::string wstringToString(const std::wstring& s)
+{
+	size_t len = WideCharToMultiByte(
+		CP_UTF8,
+		0,
+		s.c_str(),
+		s.length(),
+		nullptr,
+		0,
+		nullptr,
+		nullptr
+	);
+	std::string ret(len, '\0');
+	WideCharToMultiByte(
+		CP_UTF8,
+		0,
+		s.c_str(),
+		s.length(),
+		&ret[0],
+		ret.length(),
+		nullptr,
+		nullptr
+	);
+	return ret;
+}
+
+inline std::wstring stringToWstring(const std::string& s)
+{
+	size_t len = MultiByteToWideChar(
+		CP_UTF8,
+		0,
+		s.c_str(),
+		s.length(),
+		nullptr,
+		0
+	);
+	std::wstring ret(len, L'\0');
+	MultiByteToWideChar(
+		CP_UTF8,
+		0,
+		s.c_str(),
+		s.length(),
+		&ret[0],
+		ret.length()
+	);
+	return ret;
+}

@@ -89,6 +89,8 @@ public:
 	Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* name, HWND parent);
 	virtual ~Control() = default;
 
+	std::wstring getText();
+
 	constexpr operator HWND() noexcept { return hWnd; }
 	constexpr operator bool() const noexcept { return hWnd; }
 };
@@ -131,7 +133,7 @@ class Label : public Control
 {
 public:
 	Label(const wchar_t* text, DWORD style, DWORD exStyle, HWND parent)
-		: Control(L"Static", style ^ WS_BORDER, exStyle, text, parent) {}
+		: Control(L"Static", style, exStyle, text, parent) {}
 };
 
 typedef std::pair<std::wstring, Menu> SubMenu;
