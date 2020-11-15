@@ -138,9 +138,13 @@ LRESULT MainWindow::ConnectWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lPara
 							{
 								mw.mp->connect(addr);
 							}
+							catch (const std::exception& e)
+							{
+								MessageBoxA(*this, e.what(), "Kan inte ansluta", MB_ICONINFORMATION);
+							}
 							catch (...)
 							{
-								MessageBoxW(*this, L"Kunde inte ansluta", L"Kan inte ansluta", MB_ICONWARNING);
+								MessageBoxW(*this, L"Kunde inte ansluta", L"Kan inte ansluta", MB_ICONINFORMATION);
 							}
 						}
 						else
@@ -200,7 +204,8 @@ MainWindow::MainWindow()
 		L"Chatt",
 		Menu{MenuItem(L"Öppna", MenuId::open), 
 			 MenuItem(L"Stäng", MenuId::close),
-			 MenuItem(L"Anslut", MenuId::connect)}
+			 MenuItem(L"Anslut", MenuId::connect),
+			 MenuItem(L"Adress", MenuId::address)}
 	  ),
 	  chatBox(ES_MULTILINE | ES_READONLY | WS_VSCROLL, WS_EX_CLIENTEDGE, *this),
 	  msgBox(0, WS_EX_CLIENTEDGE, *this),
@@ -237,17 +242,45 @@ LRESULT MainWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					case MenuId::open:
 					{
-						mp.emplace(true, 0);
+						selfName.emplace();
+						try
+						{
+							mp.emplace(true, 0, &*selfName);
+						}
+						catch (...)
+						{
+							selfName.reset();
+							throw;
+						}
 					}
 					break;
 					case MenuId::close:
 					{
 						mp.reset();
+						selfName.reset();
 					}
 					break;
 					case MenuId::connect:
 					{
 						connectWindow.emplace(*this);
+					}
+					break;
+					case MenuId::address:
+					{
+						if (selfName)
+						{
+							MessageBoxW(
+								*this,
+								(L"IP: " + stringToWstring(selfName->ip) +
+								L"\r\nPort: " + toWString(selfName->port)).c_str(),
+								L"Adress",
+								MB_ICONINFORMATION
+							);
+						}
+						else
+						{
+							MessageBoxW(*this, L"Du måste öppna först", L"Har ingen adress", MB_ICONINFORMATION);
+						}
 					}
 					break;
 				}

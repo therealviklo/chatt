@@ -136,7 +136,7 @@ private:
 	void distributorJoinerLoop();
 	void receiverLoop();
 public:
-	MessageProcessor(bool ipv4, short port);
+	MessageProcessor(bool ipv4, short port, Name* selfName);
 	~MessageProcessor();
 
 	// Ingen kopiering

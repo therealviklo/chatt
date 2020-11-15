@@ -202,7 +202,7 @@ int UpDown::getValue()
 {
 	BOOL success = false;
 	int ret = SendMessageW(*this, UDM_GETPOS32, 0, reinterpret_cast<LPARAM>(&success));
-	if (!success) throw Exception("Kunde inte hämta värde från nummerinmatare");
+	if (success) throw Exception("Kunde inte hämta värde från nummerinmatare");
 	return ret;
 }
 

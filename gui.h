@@ -11,7 +11,8 @@ namespace MenuId
 	{
 		open = 101,
 		close = 102,
-		connect = 103
+		connect = 103,
+		address = 104
 	};
 }
 
@@ -23,6 +24,7 @@ private:
 	Button sendButton;
 
 	std::optional<MessageProcessor> mp;
+	std::optional<Name> selfName;
 	
 	class ConnectWindow : public Window
 	{
