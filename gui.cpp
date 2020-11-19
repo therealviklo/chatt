@@ -129,9 +129,9 @@ LRESULT MainWindow::ConnectWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lPara
 							{
 								addr = nameToAddr({wstringToString(ip.getText()), (unsigned short)port.getValue()});
 							}
-							catch (...)
+							catch (const std::exception& e)
 							{
-								MessageBoxW(*this, L"Ogiltig address", L"Kan inte ansluta", MB_ICONINFORMATION);
+								MessageBoxW(*this, stringToWstring(e.what()).c_str(), L"Ogiltig adress", MB_ICONINFORMATION);
 								break;
 							}
 							try
@@ -140,11 +140,7 @@ LRESULT MainWindow::ConnectWindow::wndProc(UINT msg, WPARAM wParam, LPARAM lPara
 							}
 							catch (const std::exception& e)
 							{
-								MessageBoxA(*this, e.what(), "Kan inte ansluta", MB_ICONINFORMATION);
-							}
-							catch (...)
-							{
-								MessageBoxW(*this, L"Kunde inte ansluta", L"Kan inte ansluta", MB_ICONINFORMATION);
+								MessageBoxW(*this, stringToWstring(e.what()).c_str(), L"Kan inte ansluta", MB_ICONINFORMATION);
 							}
 						}
 						else
