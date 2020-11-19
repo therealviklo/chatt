@@ -28,26 +28,31 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 	}
 	catch (const WSAException& e) // WSAException har en felkod som man kan skriva ut
 	{
-		std::stringstream ss;
-		ss << e.what();
-		ss << "\r\nError code: ";
+		std::wstringstream ss;
+		ss << stringToWstring(e.what());
+		ss << L"\r\nFelkod: ";
 		ss << e.errCode;
-		MessageBoxA(
+		MessageBoxW(
 			nullptr,
 			ss.str().c_str(),
-			"Error",
+			L"Kritiskt fel",
 			MB_ICONERROR | MB_TASKMODAL
 		);
 		return EXIT_FAILURE;
 	}
 	catch (const std::exception& e) // Andra fel som ärver från std::exception
 	{
-		MessageBoxA(nullptr, e.what(), "Error", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(
+			nullptr,
+			stringToWstring(e.what()).c_str(),
+			L"Kritiskt fel",
+			MB_ICONERROR | MB_TASKMODAL
+		);
 		return EXIT_FAILURE;
 	}
 	catch (...) // För fel som inte ärver från std::exception (som de borde göra)
 	{
-		MessageBoxW(nullptr, L"Unknown error", L"Error", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(nullptr, L"Okänt fel", L"Kritiskt fel", MB_ICONERROR | MB_TASKMODAL);
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

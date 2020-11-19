@@ -60,7 +60,7 @@ Addr stun(Socket& s, const Addr& stunServer)
 	}
 
 	if (ntohs(smh.messageType) != (MessageType::Method::binding | MessageType::Class::success))
-		throw StunException("STUN request failed");
+		throw StunException("STUN-förfrågan misslyckades");
 
 	const unsigned short bufSize = ntohs(smh.length) + 20;
 	
@@ -134,7 +134,7 @@ Addr stun(Socket& s, const Addr& stunServer)
 					xorData(&addr.ipv6.sin6_addr, &req.smh.cookie, 4);
 					xorData(&addr.ipv6.sin6_addr.u.Byte[4], &transactionId, 12);
 				}
-				else throw StunException("unknown address family");
+				else throw StunException("Okänd ip-version");
 			}
 			break;
 		}

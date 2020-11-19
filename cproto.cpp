@@ -91,14 +91,14 @@ void MessageProcessor::idCleanerLoop()
 	{
 		if (e.errCode != 10004)
 		{
-			std::stringstream ss;
-			ss << e.what();
-			ss << "\r\nError code: ";
+			std::wstringstream ss;
+			ss << stringToWstring(e.what());
+			ss << L"\r\nFelkod: ";
 			ss << e.errCode;
-			MessageBoxA(
+			MessageBoxW(
 				nullptr,
 				ss.str().c_str(),
-				"Error in ID cleaning thread",
+				L"Kritiskt fel i id-rensningstråd",
 				MB_ICONERROR | MB_TASKMODAL
 			);
 			throw;
@@ -106,12 +106,17 @@ void MessageProcessor::idCleanerLoop()
 	}
 	catch (const std::exception& e)
 	{
-		MessageBoxA(nullptr, e.what(), "Error in ID cleaning thread", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(
+			nullptr,
+			stringToWstring(e.what()).c_str(),
+			L"Kritiskt fel i id-rensningstråd",
+			MB_ICONERROR | MB_TASKMODAL
+		);
 		throw;
 	}
 	catch (...)
 	{
-		MessageBoxW(nullptr, L"Unknown error", L"Error in ID cleaning thread", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(nullptr, L"Okänt fel", L"Kritiskt fel i id-rensningstråd", MB_ICONERROR | MB_TASKMODAL);
 		throw;
 	}
 }
@@ -143,14 +148,14 @@ void MessageProcessor::distributorJoinerLoop()
 	{
 		if (e.errCode != 10004)
 		{
-			std::stringstream ss;
-			ss << e.what();
-			ss << "\r\nError code: ";
+			std::wstringstream ss;
+			ss << stringToWstring(e.what());
+			ss << L"\r\nFelkod: ";
 			ss << e.errCode;
-			MessageBoxA(
+			MessageBoxW(
 				nullptr,
 				ss.str().c_str(),
-				"Error in distribution thread joiner thread",
+				L"Kritiskt fel i relätrådrensartråd",
 				MB_ICONERROR | MB_TASKMODAL
 			);
 			throw;
@@ -158,12 +163,17 @@ void MessageProcessor::distributorJoinerLoop()
 	}
 	catch (const std::exception& e)
 	{
-		MessageBoxA(nullptr, e.what(), "Error in distribution thread joiner thread", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(
+			nullptr,
+			stringToWstring(e.what()).c_str(),
+			L"Kritiskt fel i relätrådrensartråd",
+			MB_ICONERROR | MB_TASKMODAL
+		);
 		throw;
 	}
 	catch (...)
 	{
-		MessageBoxW(nullptr, L"Unknown error", L"Error in distribution thread joiner thread", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(nullptr, L"Okänt fel", L"Kritiskt fel i relätrådrensartråd", MB_ICONERROR | MB_TASKMODAL);
 		throw;
 	}
 }
@@ -202,16 +212,12 @@ void MessageProcessor::receiverLoop()
 
 			if (ch.c != 'C')
 			{
-				puts("MP: Strange message");
 				s.popDatagram();
 				continue;
 			}
 			
-			printf("Received:\n\tTransID: %zu\n", ch.transId);
-			
 			if (ch.msgType == MsgType::recv)
 			{
-				printf("\tType: recv\n");
 				std::lock_guard lg(cvs_m);
 				if (cvs.count(ch.transId))
 				{
@@ -237,12 +243,10 @@ void MessageProcessor::receiverLoop()
 				{
 					if (difftime(time(nullptr), recentMsgs.at(ch.transId)) > 120.0)
 					{
-						printf("\t(Already received, but old)\n");
 						recentMsgs.erase(ch.transId);
 					}
 					else
 					{
-						printf("\t(Already received)\n");
 						s.popDatagram();
 						continue;
 					}
@@ -257,29 +261,22 @@ void MessageProcessor::receiverLoop()
 			{
 				case MsgType::text:
 				{
-					printf("\tType: text\n");
-
 					const DistrId& distrId = ((TextHeader*)&data[sizeof(CHeader)])->distrId;
-					printf("\tDistrID: %zu-%zu\n", *(uint64_t*)&distrId.bytes[0], *(uint64_t*)&distrId.bytes[8]);
 					{
 						std::lock_guard lg(msgs_m);
 						if (recentDistrMsgs.count(distrId))
 						{
 							if (difftime(time(nullptr), recentDistrMsgs.at(distrId)) > 120.0)
 							{
-								printf("\t(Already received, but old)\n");
 								recentDistrMsgs.erase(distrId);
 							}
 							else
 							{
-								printf("\t(Already received)\n");
 								break;
 							}
 						}
 						recentDistrMsgs.emplace(distrId, time(nullptr));
 					}
-
-					printf("\tText: %s\n", &data[sizeof(CHeader) + sizeof(TextHeader)]);
 
 					std::lock_guard lg(distributors_m);
 					distributors.push_back(std::thread(
@@ -292,13 +289,10 @@ void MessageProcessor::receiverLoop()
 				break;
 				case MsgType::conn:
 				{
-					printf("\tType: conn\n");
-
 					std::lock_guard lg(conns_m);
 					if (std::find(conns.begin(), conns.end(), sender) == conns.end())
 						conns.push_back(sender);
 					Name name = addrToName(sender);
-					printf("Connected:\n\tIP: %s\n\tPort: %hu\n", name.ip.c_str(), name.port);
 				}
 				break;
 			}
@@ -308,14 +302,14 @@ void MessageProcessor::receiverLoop()
 	{
 		if (e.errCode != 10004)
 		{
-			std::stringstream ss;
-			ss << e.what();
-			ss << "\r\nError code: ";
+			std::wstringstream ss;
+			ss << stringToWstring(e.what());
+			ss << L"\r\nFelkod: ";
 			ss << e.errCode;
-			MessageBoxA(
+			MessageBoxW(
 				nullptr,
 				ss.str().c_str(),
-				"Error in message processing thread",
+				L"Kritiskt fel i meddelandetråd",
 				MB_ICONERROR | MB_TASKMODAL
 			);
 			throw;
@@ -323,12 +317,17 @@ void MessageProcessor::receiverLoop()
 	}
 	catch (const std::exception& e)
 	{
-		MessageBoxA(nullptr, e.what(), "Error in message processing thread", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(
+			nullptr,
+			stringToWstring(e.what()).c_str(),
+			L"Kritiskt fel i meddelandetråd",
+			MB_ICONERROR | MB_TASKMODAL
+		);
 		throw;
 	}
 	catch (...)
 	{
-		MessageBoxW(nullptr, L"Unknown error", L"Error in message processing thread", MB_ICONERROR | MB_TASKMODAL);
+		MessageBoxW(nullptr, L"Okänt fel", L"Kritiskt fel i meddelandetråd", MB_ICONERROR | MB_TASKMODAL);
 		throw;
 	}
 }
@@ -351,15 +350,6 @@ regenId:
 	if (cvs.count(ch.transId)) goto regenId;
 	cvs[ch.transId]; // Ser konstigt ut men det här kan inserta.
 
-	printf(
-		"Sending:\n\tTransID: %zu\n\tType: %c%c%c%c\n",
-		ch.transId,
-		msgType & 0xFF,
-		(msgType >> 8) & 0xFF,
-		(msgType >> 16) & 0xFF,
-		(msgType >> 24) & 0xFF
-	);
-
 	for (char i = 0; i < 3; i++)
 	{
 		s.send(addr, &msg[0], sizeof(CHeader) + size);
@@ -368,11 +358,9 @@ regenId:
 			cvs.erase(ch.transId);
 			return;
 		}
-		puts("\t(Resending)");
 	}
-	puts("\t(Giving up)");
 	cvs.erase(ch.transId);
-	throw NotRespondingException("peer is not responding");
+	throw NotRespondingException("Nod svarar inte");
 }
 
 void MessageProcessor::sendMessage(const std::string& message)

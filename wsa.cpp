@@ -35,7 +35,7 @@ Name addrToName(const Addr& addr)
 	}
 	else
 	{
-		throw AddressException("address is neither IPv4 nor IPv6");
+		throw AddressException("Adress är varken IPv4 eller IPv6");
 	}
 }
 
@@ -57,7 +57,7 @@ Addr nameToAddr(const Name& name)
 	else
 	{
 		// TODO om det behövs
-		throw AddressException("IPv6 not supported yet");
+		throw AddressException("IPv6 stöds inte (än)");
 	}
 	return sa;
 }
@@ -70,7 +70,7 @@ WSAHandler::~WSAHandler()
 void WSAHandler::initialise()
 {
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-		throw InitFail("failed to initialise Winsock");
+		throw InitFail("Kunde inte initiera Winsock");
 	initialised = true;
 }
 
@@ -78,7 +78,7 @@ Socket::Socket(bool ipv4)
 	: ipv4(ipv4)
 {
 	s = socket(ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-	if (!s) throw WSAException("failed to create socket");
+	if (!s) throw WSAException("Kunde inte skapa socket");
 }
 
 Addr Socket::getAddr()
@@ -86,7 +86,7 @@ Addr Socket::getAddr()
 	Addr sa;
 	int len = sizeof(sa);
 	if (getsockname(s, (sockaddr*)&sa, &len) == SOCKET_ERROR)
-		throw WSAException("failed to get socket name");
+		throw WSAException("Kunde inte hämta socketens adress");
 	return sa;
 }
 
@@ -99,7 +99,7 @@ void Socket::bind(unsigned short port)
 		sa.sin_port = htons(port);
 		sa.sin_addr.s_addr = INADDR_ANY;
 		if (::bind(s, (const sockaddr*)&sa, sizeof(sa)) == SOCKET_ERROR)
-			throw WSAException("failed to bind socket");
+			throw WSAException("Kunde inte binda socket");
 	}
 	else
 	{
@@ -108,14 +108,14 @@ void Socket::bind(unsigned short port)
 		sa.sin6_port = htons(port);
 		sa.sin6_addr = in6addr_any;
 		if (::bind(s, (const sockaddr*)&sa, sizeof(sa)) == SOCKET_ERROR)
-			throw WSAException("failed to bind socket");
+			throw WSAException("Kunde inte binda socket");
 	}
 }
 
 void Socket::setTimeout(DWORD time)
 {
 	if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&time, sizeof(time)) == SOCKET_ERROR)
-		throw WSAException("failed to set socket timeout");
+		throw WSAException("Kunde inte ändra socketens timeout");
 }
 
 void Socket::send(const Addr& addr, const std::string& msg)
@@ -128,7 +128,7 @@ void Socket::send(const Addr& addr, const std::string& msg)
 		(const sockaddr*)&addr,
 		addr.family == AF_INET ? sizeof(addr.ipv4) : sizeof(addr.ipv6)
 	) == SOCKET_ERROR)
-		throw WSAException("failed to send data");
+		throw WSAException("Kunde inte skicka data");
 }
 
 void Socket::send(const Addr& addr, const void* data, int size)
@@ -141,7 +141,7 @@ void Socket::send(const Addr& addr, const void* data, int size)
 		(const sockaddr*)&addr,
 		addr.family == AF_INET ? sizeof(addr.ipv4) : sizeof(addr.ipv6)
 	) == SOCKET_ERROR)
-		throw WSAException("failed to send data");
+		throw WSAException("Kunde inte skicka data");
 }
 
 std::string Socket::recv(int max, Addr* addr)
@@ -153,12 +153,12 @@ std::string Socket::recv(int max, Addr* addr)
 	{
 		int size = sizeof(Addr);
 		received = ::recvfrom(s, &buf[0], max, 0, (sockaddr*)addr, &size);
-		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
+		if (received == SOCKET_ERROR) throw WSAException("Kunde inte ta emot data");
 	}
 	else
 	{
 		received = ::recvfrom(s, &buf[0], max, 0, nullptr, nullptr);
-		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
+		if (received == SOCKET_ERROR) throw WSAException("Kunde inte ta emot data");
 	}
 	if (received == 0) return "";
 	buf.resize(received);
@@ -172,15 +172,15 @@ void Socket::recv(void* buffer, int size, Addr* addr)
 	{
 		int size = sizeof(Addr);
 		received = ::recvfrom(s, (char*)buffer, size, 0, (sockaddr*)addr, &size);
-		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
+		if (received == SOCKET_ERROR) throw WSAException("Kunde inte ta emot data");
 	}
 	else
 	{
 		received = ::recvfrom(s, (char*)buffer, size, 0, nullptr, nullptr);
-		if (received == SOCKET_ERROR) throw WSAException("failed to receive data");
+		if (received == SOCKET_ERROR) throw WSAException("Kunde inte ta emot data");
 	}
-	if (received == 0) throw ConnectionClosed("connection closed gracefully");
-	if (received != size) throw Exception("did not receive correct amount of data");
+	if (received == 0) throw ConnectionClosed("Anslutning stänges korrekt");
+	if (received != size) throw Exception("Mottog inte rätt mängd data");
 }
 
 void Socket::peek(void* buffer, int size, Addr* addr)
@@ -194,7 +194,7 @@ void Socket::peek(void* buffer, int size, Addr* addr)
 		{
 			int errCode = WSAGetLastError();
 			if (errCode != 10040)
-				throw WSAException("failed to peek data", errCode);
+				throw WSAException("Kunde inte peeka data", errCode);
 		}
 	}
 	else
@@ -204,11 +204,11 @@ void Socket::peek(void* buffer, int size, Addr* addr)
 		{
 			int errCode = WSAGetLastError();
 			if (errCode != 10040)
-				throw WSAException("failed to peek data", errCode);
+				throw WSAException("Kunde inte peeka data", errCode);
 		}
 	}
-	if (received == 0) throw ConnectionClosed("connection closed gracefully");
-	if (received > 0 && received < size) throw Exception("did not receive correct amount of data");
+	if (received == 0) throw ConnectionClosed("Anslutning stänges korrekt");
+	if (received > 0 && received < size) throw Exception("Mottog inte rätt mängd data");
 }
 
 void Socket::popDatagram()
