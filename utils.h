@@ -114,7 +114,7 @@ class Defer
 private:
 	L l;
 public:
-	Defer(L&& l) : l(std::move(l)) {}
+	Defer(L l) : l(std::move(l)) {}
 	~Defer()
 	{
 		l();

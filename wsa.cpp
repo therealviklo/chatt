@@ -79,6 +79,21 @@ Socket::Socket(bool ipv4)
 {
 	s = socket(ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	if (!s) throw WSAException("Kunde inte skapa socket");
+	
+	// Detta ska fixa någon bugg
+	BOOL newBehaviour = FALSE;
+	DWORD bytesReturned = 0;
+	WSAIoctl(
+		s,
+		_WSAIOW(IOC_VENDOR, 12),
+		&newBehaviour,
+		sizeof(newBehaviour),
+		nullptr,
+		0,
+		&bytesReturned,
+		nullptr,
+		nullptr
+	);
 }
 
 Addr Socket::getAddr()
