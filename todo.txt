@@ -1,0 +1,2 @@
+- Se till att trådar fungerar som de ska
+- Se till att felmeddelanden visas om man inte fångar exceptions
