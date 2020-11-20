@@ -171,11 +171,11 @@ Control::Control(const wchar_t* wc, DWORD style, DWORD exStyle, const wchar_t* n
 std::wstring Control::getText()
 {
 	std::wstring s;
-	const size_t size = SendMessageW(*this, WM_GETTEXTLENGTH, 0, 0);
-	if (size)
+	const size_t size = SendMessageW(*this, WM_GETTEXTLENGTH, 0, 0) + 1;
+	if (size != 1)
 	{
 		s.resize(size);
-		SendMessageW(*this, WM_GETTEXT, s.size(), reinterpret_cast<LPARAM>(&s[0]));
+		s.resize(SendMessageW(*this, WM_GETTEXT, s.size(), reinterpret_cast<LPARAM>(&s[0])));
 	}
 	return s;
 }
